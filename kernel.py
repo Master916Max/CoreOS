@@ -95,8 +95,9 @@ class Kernel:
         except SyscallAllreadyRegisteredException as e:
             print(f"Error loading syscalls: {e}")
     def setup_syscalls(self):
-
         
+        self.syscall_manager.add_file_syscalls(self.drivers_manager.drivers["ntfs"])
+
         def syscall_create_process(args):
             file= args["path"]
             if file != "":
