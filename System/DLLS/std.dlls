@@ -1,0 +1,16 @@
+from .defindes import DLL, SystemLevel
+
+class SCA(DLL):
+    def __init__(self):
+        super().__init__("Standard Console API", SystemLevel.User)
+
+        pass
+
+    def _load(self):
+        pass
+
+    def _unload(self):
+        pass
+
+    def print(self, text):
+        pass
