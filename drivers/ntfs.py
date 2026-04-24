@@ -1,10 +1,7 @@
-
-from io import TextIOWrapper
-from selectors import SelectorKey
 from typing import IO, Any
 
 from .Driver import Driver, Invalid_Mode
-
+from .common import SyscallReturn, SyscallReturnType
 
 
 class NTFS(Driver):
@@ -56,17 +53,17 @@ class NTFS(Driver):
     def run(self,function, arg1:int|str,arg2:int|str|None,arg3:None|int) -> Any:
         match function:
             case "open":
-                return self.read(arg1, arg2)
+                return SyscallReturn(SyscallReturnType.Succes, self.open(arg1, arg2))
             case "close":
-                return self.close(arg1)
+                return SyscallReturn(SyscallReturnType.Succes, self.close(arg1))
             case "write":
-                return self.write(arg1, arg2)
+                return SyscallReturn(SyscallReturnType.Succes, self.write(arg1, arg2))
             case "read":
-                return self.read(arg1,arg2)
+                return SyscallReturn(SyscallReturnType.Succes, self.read(arg1,arg2))
             case "seek":
-                return self.seek(arg1,arg2,arg3)
+                return SyscallReturn(SyscallReturnType.Succes, self.seek(arg1,arg2,arg3))
             case "tell":
-                return self.tell(arg1)
+                return SyscallReturn(SyscallReturnType.Succes, self.tell(arg1))
             case _ :
                 return False
         

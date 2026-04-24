@@ -1,6 +1,8 @@
 from .logging import Logger
 import pygame
 
+from .common import SyscallReturn,SyscallReturnType
+
 class TextUserInterface:
     def __init__(self, screen):
         self.screen = screen
@@ -8,7 +10,8 @@ class TextUserInterface:
         self.text_color = (255, 255, 255)  # White color
         self.background_color = (0, 0, 0)    # Black color
 
-        # 
+        self.lock = 0
+
 
 
         self.height = screen.get_height() // self.font.render("ABC", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
@@ -50,3 +53,27 @@ class TextUserInterface:
             self.draw_text(line, (10, idx * self.font.get_height() + 10))
         
         pygame.display.flip()
+    
+    def handle_event(self):
+        # Handle all Pygame events here (e.g., keyboard input)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            else:
+                continue
+        self.update()
+
+    # Syscalls
+
+    def require_tui(self, pid):
+        if self.lock == 0:
+            self.lock = pid
+            return SyscallReturn(SyscallReturnType.Succes, 0)
+        else:
+
+    def unlock_tui(self, pid):
+        if self.lock == pid:
+            self.lock = 0
+
+    def print(self, text):

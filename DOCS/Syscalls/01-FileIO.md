@@ -1,8 +1,9 @@
 # File I/O & Filesystem Syscalls
 
-**Kategorie-ID**: 1-22  
-**Scope**: Datei- und Verzeichnisverwaltung  
-**Voraussetzungen**: Keine
+**Kategorie-ID**: 1–22  
+**Kategorie**: Datei- und Verzeichnisverwaltung  
+**Gesamtzahl**: 22 Syscalls  
+**Scope**: Program & Service
 
 [← Übersicht](README.md) | [Nächste: Process Management →](02-ProcessManagement.md)
 
@@ -14,653 +15,830 @@ Diese Kategorie enthält alle Syscalls für Dateisystem-Operationen: Datei-Opera
 
 | ID | Syscall | Beschreibung |
 |---|---------|------------|
-| 1 | `open` | Datei zum Lesen/Schreiben öffnen |
-| 2 | `close` | Datei-Deskriptor schließen |
-| 3 | `read` | Daten aus Datei lesen |
-| 4 | `write` | Daten in Datei schreiben |
-| 5 | `seek` | Position in Datei ändern |
-| 6 | `tell` | Aktuelle Position abrufen |
-| 7 | `stat` | Datei-Metadaten abrufen |
-| 8 | `fstat` | Metadaten via Deskriptor |
-| 9 | `mkdir` | Verzeichnis erstellen |
-| 10 | `rmdir` | Leeres Verzeichnis löschen |
-| 11 | `chdir` | Aktuelles Verzeichnis ändern |
-| 12 | `getcwd` | Aktuelles Verzeichnis abrufen |
-| 13 | `opendir` | Verzeichnis öffnen |
-| 14 | `readdir` | Verzeichnis-Einträge auflisten |
-| 15 | `closedir` | Verzeichnis schließen |
-| 16 | `unlink` | Datei löschen |
-| 17 | `rename` | Datei umbenennen |
-| 18 | `truncate` | Datei auf Größe kürzen |
-| 19 | `chmod` | Berechtigungen ändern |
-| 20 | `chown` | Besitzer/Gruppe ändern |
-| 21 | `access` | Zugriff prüfen |
-| 22 | `flush` | Puffer in Datei schreiben |
+| 1 | [`open`](#1-open) | Datei zum Lesen/Schreiben öffnen |
+| 2 | [`close`](#2-close) | Datei-Deskriptor schließen |
+| 3 | [`read`](#3-read) | Daten aus Datei lesen |
+| 4 | [`write`](#4-write) | Daten in Datei schreiben |
+| 5 | [`seek`](#5-seek) | Position in Datei ändern |
+| 6 | [`tell`](#6-tell) | Aktuelle Position abrufen |
+| 7 | [`stat`](#7-stat) | Datei-Metadaten abrufen (nach Pfad) |
+| 8 | [`fstat`](#8-fstat) | Datei-Metadaten abrufen (nach FD) |
+| 9 | [`mkdir`](#9-mkdir) | Verzeichnis erstellen |
+| 10 | [`rmdir`](#10-rmdir) | Leeres Verzeichnis löschen |
+| 11 | [`chdir`](#11-chdir) | Aktuelles Verzeichnis ändern |
+| 12 | [`getcwd`](#12-getcwd) | Aktuelles Verzeichnis abrufen |
+| 13 | [`opendir`](#13-opendir) | Verzeichnis öffnen |
+| 14 | [`readdir`](#14-readdir) | Verzeichnis-Einträge auflisten |
+| 15 | [`closedir`](#15-closedir) | Verzeichnis schließen |
+| 16 | [`unlink`](#16-unlink) | Datei löschen |
+| 17 | [`rename`](#17-rename) | Datei/Verzeichnis umbenennen |
+| 18 | [`truncate`](#18-truncate) | Datei auf Größe kürzen |
+| 19 | [`chmod`](#19-chmod) | Dateiberechtigungen ändern |
+| 20 | [`chown`](#20-chown) | Besitzer/Gruppe ändern |
+| 21 | [`access`](#21-access) | Zugriff auf Datei prüfen |
+| 22 | [`flush`](#22-flush) | Dateipuffer in Speicher schreiben |
 
 ---
 
 ## Detaillierte Syscall-Beschreibungen
 
-### 1. `open` - Datei öffnen
+---
 
-**Parameter**: `(path: str, mode: str)`  
-**Rückgabe**: `int (file descriptor)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`, `INVALID_MODE`
+## 1. `open`
 
-Öffnet eine Datei und gibt einen Datei-Deskriptor zurück.
+**Beschreibung**: Öffnet eine Datei und gibt einen Datei-Deskriptor zurück.
 
-**Gültige Modi**:
-- `"r"` - Lesen
-- `"w"` - Schreiben (überschreibt)
-- `"a"` - Anhängen
-- `"rb"` - Binär lesen
-- `"wb"` - Binär schreiben
-
-**Beispiel**:
-```python
-# Textdatei öffnen
-fd = syscall(1, "C:\\Users\\Max\\test.txt", "r")
-if fd > 0:
-    print(f"Datei geöffnet: FD={fd}")
-else:
-    print(f"Fehler: {fd}")
-
-# Datei zum Schreiben öffnen
-fd_write = syscall(1, "C:\\output\\result.txt", "w")
-
-# Datei im Binär-Modus öffnen
-fd_bin = syscall(1, "C:\\data\\image.bin", "rb")
+**Signatur**:
 ```
+fd = open(path: str, mode: str) → int
+```
+
+**Parameter**:
+- `path` (str): Absoluter oder relativer Dateipfad
+- `mode` (str): Öffnungsmodus (`"r"`, `"w"`, `"a"`, `"rb"`, `"wb"`)
+
+**Rückgabe**: 
+- `int > 0`: Datei-Deskriptor bei Erfolg
+- `int < 0`: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Datei existiert nicht (im Lesemodus)
+- `PERMISSION_DENIED` (-3): Keine Berechtigung für Datei
+- `INVALID_MODE` (-6): Ungültiger Öffnungsmodus
+
+**Beschreibung**:  
+Öffnet eine Datei für Lese-, Schreib- oder Anhängoperationen. Der zurückgegebene Deskriptor muss für nachfolgende Operationen (`read`, `write`, `seek`, etc.) verwendet und später mit `close` geschlossen werden.
+
+**Hinweise**:
+- **Gültige Modi**: `"r"` (Lesen), `"w"` (Schreiben, überschreiben), `"a"` (Anhängen), `"rb"` (Binär-Lesen), `"wb"` (Binär-Schreiben)
+- Beim Modus `"w"` wird eine existierende Datei überschrieben
+- Beim Modus `"a"` wird der Schreibzeiger ans Ende der Datei bewegt
+- Mehrere Deskriptoren für dieselbe Datei sind möglich
+- **Wichtig**: Alle geöffneten Dateien müssen mit `close` geschlossen werden
+
+**Siehe auch**: [`close`](#2-close), [`read`](#3-read), [`write`](#4-write)
 
 ---
 
-### 2. `close` - Datei schließen
+## 2. `close`
 
-**Parameter**: `(fd: int)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `INVALID_FD`, `IO_ERROR`
+**Beschreibung**: Schließt einen Datei-Deskriptor und gibt die Ressourcen frei.
 
-Schließt einen Datei-Deskriptor und gibt Ressourcen frei.
-
-**Beispiel**:
-```python
-fd = syscall(1, "C:\\test.txt", "r")
-# ... Datei bearbeiten ...
-result = syscall(2, fd)
-if result == 0:
-    print("Datei geschlossen")
-else:
-    print(f"Fehler beim Schließen: {result}")
+**Signatur**:
 ```
+result = close(fd: int) → int
+```
+
+**Parameter**:
+- `fd` (int): Datei-Deskriptor zum Schließen
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `IO_ERROR` (-7): I/O-Fehler beim Schließen
+
+**Beschreibung**:  
+Schließt einen offenen Datei-Deskriptor und gibt die zugehörigen Systemressourcen frei. Nach dem Schließen darf der Deskriptor nicht mehr verwendet werden.
+
+**Hinweise**:
+- Jeden mit `open` geöffneten Deskriptor müssen Sie mit `close` schließen
+- Mehrmaliges Schließen desselben Deskriptors erzeugt einen Fehler
+- Gepufferte Daten werden automatisch geschrieben (äquivalent zu `flush`)
+- Am Ende eines Programms werden alle offenen Deskriptoren vom System geschlossen
+
+**Siehe auch**: [`open`](#1-open), [`flush`](#22-flush)
 
 ---
 
-### 3. `read` - Daten lesen
+## 3. `read`
 
-**Parameter**: `(fd: int, size: int)`  
-**Rückgabe**: `str (data)`  
-**Fehler**: `INVALID_FD`, `IO_ERROR`, `EOF`
+**Beschreibung**: Liest bis zu `size` Bytes aus einer offenen Datei.
 
-Liest bis zu `size` Bytes aus Datei.
-
-**Beispiel**:
-```python
-fd = syscall(1, "C:\\Users\\Max\\data.txt", "r")
-
-# 100 Bytes lesen
-data = syscall(3, fd, 100)
-print(f"Gelesen: {data}")
-
-# Datei komplett lesen (in Chunks)
-fd = syscall(1, "C:\\large_file.txt", "r")
-all_data = ""
-while True:
-    chunk = syscall(3, fd, 1024)
-    if not chunk:
-        break
-    all_data += chunk
-
-syscall(2, fd)  # close
+**Signatur**:
 ```
+data = read(fd: int, size: int) → str
+```
+
+**Parameter**:
+- `fd` (int): Datei-Deskriptor
+- `size` (int): Maximale Anzahl Bytes zum Lesen
+
+**Rückgabe**: 
+- `str`: Gelesene Daten (kann kürzer als `size` sein)
+- Leerer String: Dateiende (EOF) erreicht
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `IO_ERROR` (-7): I/O-Fehler
+- `EOF` (-9): Dateiende erreicht
+
+**Beschreibung**:  
+Liest bis zu `size` Bytes von der aktuellen Position in der Datei. Der Dateizeiger wird nach dem Lesen um die Anzahl der gelesenen Bytes verschoben.
+
+**Hinweise**:
+- Tatsächlich gelesene Datenmenge kann kleiner als `size` sein
+- Wiederholter Aufruf mit `size=1024` erlaubt großen Datei-Lesung in Chunks
+- Bei EOF-Erreichen wird eine leere Zeichenkette zurückgegeben
+- Lesemodi: `"r"`, `"rb"` erforderlich
+
+**Siehe auch**: [`open`](#1-open), [`write`](#4-write), [`seek`](#5-seek), [`tell`](#6-tell)
 
 ---
 
-### 4. `write` - Daten schreiben
+## 4. `write`
 
-**Parameter**: `(fd: int, data: str)`  
-**Rückgabe**: `int (bytes_written)`  
-**Fehler**: `INVALID_FD`, `IO_ERROR`, `PERMISSION_DENIED`
+**Beschreibung**: Schreibt Daten an die aktuelle Position in einer offenen Datei.
 
-Schreibt Daten in Datei.
-
-**Beispiel**:
-```python
-fd = syscall(1, "C:\\output\\log.txt", "w")
-
-# Text schreiben
-bytes_written = syscall(4, fd, "Hello World!\n")
-print(f"Geschrieben: {bytes_written} Bytes")
-
-# Mehrere Zeilen
-syscall(4, fd, "Zeile 1\n")
-syscall(4, fd, "Zeile 2\n")
-syscall(4, fd, "Zeile 3\n")
-
-syscall(2, fd)  # close
+**Signatur**:
 ```
+bytes_written = write(fd: int, data: str) → int
+```
+
+**Parameter**:
+- `fd` (int): Datei-Deskriptor
+- `data` (str): Zu schreibende Daten
+
+**Rückgabe**: 
+- `int > 0`: Anzahl geschriebener Bytes
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `IO_ERROR` (-7): I/O-Fehler
+- `PERMISSION_DENIED` (-3): Keine Schreibberechtigung
+
+**Beschreibung**:  
+Schreibt Daten an die aktuelle Position in der Datei. Wenn die Datei im Anhängmodus (`"a"`) geöffnet ist, wird am Ende geschrieben.
+
+**Hinweise**:
+- Schreibmodi: `"w"`, `"a"`, `"wb"` erforderlich
+- Daten werden möglicherweise gepuffert (nutzen Sie `flush` zur Sicherung)
+- Wiederholte Aufrufe schreiben Daten nacheinander hintereinander
+- Rückgabewert zeigt tatsächlich geschriebene Bytes (normalerweise `len(data)`)
+
+**Siehe auch**: [`open`](#1-open), [`read`](#3-read), [`flush`](#22-flush)
 
 ---
 
-### 5. `seek` - Position ändern
+## 5. `seek`
 
-**Parameter**: `(fd: int, offset: int, whence: int)`  
-**Rückgabe**: `int (new_position)`  
-**Fehler**: `INVALID_FD`, `INVALID_OFFSET`, `IO_ERROR`
+**Beschreibung**: Setzt die Leseposition in einer offenen Datei.
 
-Setzt die Leseposition. `whence`: 0=Anfang, 1=Aktuell, 2=Ende
-
-**Beispiel**:
-```python
-fd = syscall(1, "C:\\data.bin", "rb")
-
-# Zu Anfang
-pos = syscall(5, fd, 0, 0)
-print(f"Position: {pos}")
-
-# 100 Bytes vom Anfang
-pos = syscall(5, fd, 100, 0)
-
-# 50 Bytes vom Ende
-pos = syscall(5, fd, -50, 2)
-
-# Letzten 1000 Bytes lesen
-syscall(5, fd, -1000, 2)
-data = syscall(3, fd, 1000)
-
-syscall(2, fd)
+**Signatur**:
 ```
+new_position = seek(fd: int, offset: int, whence: int) → int
+```
+
+**Parameter**:
+- `fd` (int): Datei-Deskriptor
+- `offset` (int): Byte-Offset (kann negativ sein)
+- `whence` (int): Referenzpunkt — `0` = Anfang, `1` = aktuell, `2` = Ende
+
+**Rückgabe**: 
+- `int ≥ 0`: Neue Position ab Dateianfang
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `INVALID_OFFSET` (-6): Offset außerhalb Dateibereich
+- `IO_ERROR` (-7): I/O-Fehler
+
+**Beschreibung**:  
+Verschiebt den Dateizeiger zu einer neuen Position. Nützlich für zufälliger Dateizugriff (Random Access).
+
+**Hinweise**:
+- **whence-Werte**: `0` = Anfang, `1` = aktuelle Position, `2` = Ende
+- Mit `whence=2, offset=-100` springt man 100 Bytes vor das Dateiende
+- Kann über Dateigrenzen hinaus gesucht werden (aktuell führt dies zu einem Fehler)
+- `seek(fd, 0, 0)` setzt Dateizeiger auf den Anfang
+
+**Siehe auch**: [`tell`](#6-tell), [`read`](#3-read), [`write`](#4-write)
 
 ---
 
-### 6. `tell` - Position abrufen
+## 6. `tell`
 
-**Parameter**: `(fd: int)`  
-**Rückgabe**: `int (position)`  
-**Fehler**: `INVALID_FD`, `IO_ERROR`
+**Beschreibung**: Gibt die aktuelle Leseposition in einer Datei zurück.
 
-Gibt die aktuelle Leseposition zurück.
-
-**Beispiel**:
-```python
-fd = syscall(1, "C:\\test.txt", "r")
-
-# Nach 50 Bytes lesen
-syscall(3, fd, 50)
-
-# Position prüfen
-pos = syscall(6, fd)
-print(f"Aktuelle Position: {pos}")
-
-syscall(2, fd)
+**Signatur**:
 ```
+position = tell(fd: int) → int
+```
+
+**Parameter**:
+- `fd` (int): Datei-Deskriptor
+
+**Rückgabe**: 
+- `int ≥ 0`: Aktuelle Position ab Dateianfang (in Bytes)
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `IO_ERROR` (-7): I/O-Fehler
+
+**Beschreibung**:  
+Gibt die aktuelle Byte-Position im Dateistream zurück. Diese Position wird nach `read` oder `write` Operationen aktualisiert.
+
+**Hinweise**:
+- Position beginnt bei `0` nach `open`
+- Im Anhängmodus (`"a"`) zeigt `tell` auf das Dateiende
+- Kombination mit `seek` erlaubt flexibles Positionierungsmanagement
+- Wird oft vor `seek` aufgerufen, um die alte Position zu speichern
+
+**Siehe auch**: [`seek`](#5-seek), [`read`](#3-read), [`write`](#4-write)
 
 ---
 
-### 7. `stat` - Metadaten abrufen (Pfad)
+## 7. `stat`
 
-**Parameter**: `(path: str)`  
-**Rückgabe**: `dict (file_stats)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`
+**Beschreibung**: Gibt Datei-Metadaten basierend auf einem Dateipfad zurück.
 
-Gibt Datei-Informationen zurück: Größe, Änderungszeit, Berechtigungen etc.
-
-**Beispiel**:
-```python
-stats = syscall(7, "C:\\Users\\Max\\file.txt")
-print(f"Größe: {stats['size']} Bytes")
-print(f"Geändert: {stats['mtime']}")
-print(f"Berechtigungen: {stats['mode']}")
-print(f"Ist Datei: {stats['is_file']}")
-print(f"Ist Verzeichnis: {stats['is_dir']}")
+**Signatur**:
 ```
+stats = stat(path: str) → dict
+```
+
+**Parameter**:
+- `path` (str): Dateipfad
+
+**Rückgabe**: 
+- `dict`: Dateistatistiken (siehe unten)
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Datei existiert nicht
+- `PERMISSION_DENIED` (-3): Keine Berechtigung zum Zugriff
+
+**Dateistatistiken** (dict-Schlüssel):
+- `size` (int): Dateigröße in Bytes
+- `mode` (int): Dateiberechtigungen (oktal)
+- `mtime` (int): Änderungszeit (Unix-Timestamp)
+- `atime` (int): Zugriffzeit
+- `ctime` (int): Änderungszeit der Metadaten
+- `is_file` (bool): True, wenn reguläre Datei
+- `is_dir` (bool): True, wenn Verzeichnis
+- `uid` (int): Besitzer-UID
+- `gid` (int): Besitzer-GID
+
+**Beschreibung**:  
+Ruft Dateimetadaten ab, ohne die Datei zu öffnen. Nützlich für Dateiprüfungen und Informationsabfragen.
+
+**Hinweise**:
+- **Unterschied zu `fstat`**: `stat` benötigt den Pfad, nicht den Deskriptor
+- Kann auf symlinks, reguläre Dateien und Verzeichnisse aufgerufen werden
+- Funktioniert auch auf nicht geöffneten Dateien
+- Nützlich für Größenabfrage, Änderungszeit-Abfrage, etc.
+
+**Siehe auch**: [`fstat`](#8-fstat), [`open`](#1-open)
 
 ---
 
-### 8. `fstat` - Metadaten abrufen (Deskriptor)
+## 8. `fstat`
 
-**Parameter**: `(fd: int)`  
-**Rückgabe**: `dict (file_stats)`  
-**Fehler**: `INVALID_FD`
+**Beschreibung**: Gibt Datei-Metadaten basierend auf einem Deskriptor zurück.
 
-Wie `stat`, aber mit offener Datei (Deskriptor).
-
-**Beispiel**:
-```python
-fd = syscall(1, "C:\\data.bin", "rb")
-
-stats = syscall(8, fd)
-print(f"Dateigröße: {stats['size']}")
-print(f"Aktuell gelesen: {stats['position']}")
-
-syscall(2, fd)
+**Signatur**:
 ```
+stats = fstat(fd: int) → dict
+```
+
+**Parameter**:
+- `fd` (int): Datei-Deskriptor
+
+**Rückgabe**: 
+- `dict`: Dateistatistiken (identisch zu `stat`)
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+
+**Dateistatistiken**: Siehe [`stat`](#7-stat)
+
+**Beschreibung**:  
+Wie `stat`, aber arbeitet mit einem offenen Datei-Deskriptor statt mit Pfad.
+
+**Hinweise**:
+- Nützlich, um Dateigröße oder aktuelle Position beim Lesen zu prüfen
+- Kein Fehler `PERMISSION_DENIED` (Sie haben bereits Zugriff, sonst würde `open` fehlschlagen)
+- Schneller als `stat`, da keine Pfadauflösung erforderlich ist
+
+**Siehe auch**: [`stat`](#7-stat), [`tell`](#6-tell)
 
 ---
 
-### 9. `mkdir` - Verzeichnis erstellen
+## 9. `mkdir`
 
-**Parameter**: `(path: str, mode: int)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `PERMISSION_DENIED`, `FILE_EXISTS`, `PATH_NOT_FOUND`
+**Beschreibung**: Erstellt ein neues Verzeichnis.
 
-Erstellt ein neues Verzeichnis. `mode` ist typisch 0o755.
-
-**Beispiel**:
-```python
-# Einfaches Verzeichnis
-result = syscall(9, "C:\\new_folder", 0o755)
-if result == 0:
-    print("Verzeichnis erstellt")
-else:
-    print(f"Fehler: {result}")
-
-# Mit Windows-Pfad
-result = syscall(9, "C:\\Users\\Max\\MyFiles", 0o755)
-
-# Verschachtelt (Eltern müssen existieren!)
-result = syscall(9, "C:\\Users\\Max\\Projects\\MyProject", 0o755)
+**Signatur**:
 ```
+result = mkdir(path: str, mode: int) → int
+```
+
+**Parameter**:
+- `path` (str): Pfad des zu erstellenden Verzeichnisses
+- `mode` (int): Dateiberechtigungen (oktal, typisch `0o755`)
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `PERMISSION_DENIED` (-3): Keine Berechtigung im übergeordneten Verzeichnis
+- `FILE_EXISTS` (-20): Verzeichnis/Datei existiert bereits
+- `PATH_NOT_FOUND` (-23): Übergeordnetes Verzeichnis existiert nicht
+
+**Beschreibung**:  
+Erstellt ein einzelnes neues Verzeichnis. Das übergeordnete Verzeichnis muss existieren.
+
+**Hinweise**:
+- **Keine rekursive Erstellung**: Verwenden Sie für verschachtelte Pfade mehrere `mkdir` Aufrufe
+- Typische Modi: `0o755` (rwxr-xr-x), `0o700` (rwx------)
+- Der `mode`-Parameter kann durch umask des Prozesses modifiziert werden
+- Windows-Pfade werden unterstützt (z.B. `C:\\Users\\Max\\NewFolder`)
+
+**Siehe auch**: [`rmdir`](#10-rmdir), [`chdir`](#11-chdir), [`stat`](#7-stat)
 
 ---
 
-### 10. `rmdir` - Verzeichnis löschen
+## 10. `rmdir`
 
-**Parameter**: `(path: str)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `PERMISSION_DENIED`, `DIR_NOT_EMPTY`, `FILE_NOT_FOUND`
+**Beschreibung**: Löscht ein leeres Verzeichnis.
 
-Löscht ein leeres Verzeichnis.
-
-**Beispiel**:
-```python
-# Leeres Verzeichnis löschen
-result = syscall(10, "C:\\empty_folder")
-if result == 0:
-    print("Verzeichnis gelöscht")
-else:
-    print(f"Fehler: {result}")
-
-# Verzeichnis ist nicht leer - Fehler!
-result = syscall(10, "C:\\folder_with_files")
-# Gibt DIR_NOT_EMPTY Fehler zurück
+**Signatur**:
 ```
+result = rmdir(path: str) → int
+```
+
+**Parameter**:
+- `path` (str): Pfad des zu löschenden Verzeichnisses
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `PERMISSION_DENIED` (-3): Keine Berechtigung
+- `DIR_NOT_EMPTY` (-24): Verzeichnis ist nicht leer
+- `FILE_NOT_FOUND` (-4): Verzeichnis existiert nicht
+
+**Beschreibung**:  
+Löscht ein Verzeichnis, das völlig leer sein muss (keine Dateien oder Unterverzeichnisse).
+
+**Hinweise**:
+- Zum Löschen von Dateien, verwenden Sie [`unlink`](#16-unlink), nicht `rmdir`
+- Zum Löschen von nicht-leeren Verzeichnissen, müssen Sie zuerst alle Inhalte löschen
+- Das übergeordnete Verzeichnis muss beschreibbar sein
+- Einfache Fehlerbehandlung: Zuerst alle Dateien mit `unlink` löschen, dann `rmdir`
+
+**Siehe auch**: [`mkdir`](#9-mkdir), [`unlink`](#16-unlink), [`opendir`](#13-opendir), [`readdir`](#14-readdir)
 
 ---
 
-### 11. `chdir` - Verzeichnis wechseln
+## 11. `chdir`
 
-**Parameter**: `(path: str)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`, `NOT_DIRECTORY`
+**Beschreibung**: Ändert das aktuelle Arbeitsverzeichnis des Prozesses.
 
-Wechselt zum angegebenen Verzeichnis (CWD).
-
-**Beispiel**:
-```python
-# Zum Benutzer-Verzeichnis
-result = syscall(11, "C:\\Users\\Max")
-if result == 0:
-    print("In Verzeichnis gewechselt")
-
-# Aktuelles Verzeichnis danach abrufen
-cwd = syscall(12)  # getcwd()
-print(f"Jetzt in: {cwd}")
-
-# Zu Systemordner
-syscall(11, "C:\\Windows\\System32")
+**Signatur**:
 ```
+result = chdir(path: str) → int
+```
+
+**Parameter**:
+- `path` (str): Neues Arbeitsverzeichnis
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Verzeichnis existiert nicht
+- `PERMISSION_DENIED` (-3): Keine Zugriffsberechtigung
+- `NOT_DIRECTORY` (-22): Pfad ist keine Verzeichnis
+
+**Beschreibung**:  
+Wechselt das aktuelle Arbeitsverzeichnis (CWD) des Prozesses. Relative Dateipfade werden danach relativ zu diesem Verzeichnis aufgelöst.
+
+**Hinweise**:
+- Ändert CWD **des gesamten Prozesses** (oder nur des aktuellen Threads?)
+- Relative Pfade (z.B. `"file.txt"`) werden nach diesem Verzeichnis aufgelöst
+- Typische Verwendung am Programmstart zum Setzen eines Basis-Verzeichnisses
+- Parent-Verzeichnis (`".."`) kann verwendet werden
+
+**Siehe auch**: [`getcwd`](#12-getcwd), [`opendir`](#13-opendir)
 
 ---
 
-### 12. `getcwd` - Aktuelles Verzeichnis
+## 12. `getcwd`
 
-**Parameter**: `()`  
-**Rückgabe**: `str (current_path)`  
-**Fehler**: `IO_ERROR`
+**Beschreibung**: Gibt das aktuelle Arbeitsverzeichnis des Prozesses zurück.
 
-Gibt das aktuelle Arbeitsverzeichnis zurück.
-
-**Beispiel**:
-```python
-cwd = syscall(12)
-print(f"Aktuelles Verzeichnis: {cwd}")
-
-# In anderes Verzeichnis wechseln
-syscall(11, "C:\\Users\\Max\\Documents")
-
-# Neues Verzeichnis abrufen
-new_cwd = syscall(12)
-print(f"Neues Verzeichnis: {new_cwd}")
+**Signatur**:
 ```
+cwd = getcwd() → str
+```
+
+**Parameter**: Keine
+
+**Rückgabe**: 
+- `str`: Aktuelles Arbeitsverzeichnis (absoluter Pfad)
+- Negativ: Fehlercode
+
+**Fehler**:
+- `IO_ERROR` (-7): Kann CWD nicht bestimmen
+
+**Beschreibung**:  
+Ruft den aktuellen Arbeitsverzeichnis-Pfad des Prozesses ab. Wird verwendet um zu prüfen, wo sich der Prozess gerade "befindet".
+
+**Hinweise**:
+- Wird oft nach [`chdir`](#11-chdir) aufgerufen um den Erfolg zu verifizieren
+- Der zurückgegebene Pfad ist absolut (z.B. `"C:\\Users\\Max\\Documents"`)
+- Der Rückgabewert wird oft für relative Pfadauflösung benötigt
+
+**Siehe auch**: [`chdir`](#11-chdir)
 
 ---
 
-### 13. `opendir` - Verzeichnis öffnen
+## 13. `opendir`
 
-**Parameter**: `(path: str)`  
-**Rückgabe**: `int (dir_fd)`  
-**Fehler**: `FILE_NOT_FOUND`, `NOT_DIRECTORY`, `PERMISSION_DENIED`
+**Beschreibung**: Öffnet ein Verzeichnis zum Auflisten seiner Einträge.
 
-Öffnet ein Verzeichnis zum Auflisten von Einträgen.
-
-**Beispiel**:
-```python
-dir_fd = syscall(13, "C:\\Users\\Max\\Documents")
-if dir_fd > 0:
-    print(f"Verzeichnis geöffnet: FD={dir_fd}")
-else:
-    print(f"Fehler: {dir_fd}")
+**Signatur**:
 ```
+dir_fd = opendir(path: str) → int
+```
+
+**Parameter**:
+- `path` (str): Pfad des zu öffnenden Verzeichnisses
+
+**Rückgabe**: 
+- `int > 0`: Verzeichnis-Deskriptor
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Verzeichnis existiert nicht
+- `NOT_DIRECTORY` (-22): Pfad ist keine Verzeichnis
+- `PERMISSION_DENIED` (-3): Keine Leseberechtigung
+
+**Beschreibung**:  
+Öffnet ein Verzeichnis ähnlich wie `open` eine Datei. Der Deskriptor wird mit [`readdir`](#14-readdir) und [`closedir`](#15-closedir) verwendet.
+
+**Hinweise**:
+- Der Rückgabewert ist ein Verzeichnis-Deskriptor (ähnlich wie Datei-Deskriptor)
+- Muss mit [`closedir`](#15-closedir) geschlossen werden
+- Nach dem Öffnen zeigt ein interner Zeiger auf den ersten Eintrag
+- Wiederholter `readdir` Aufruf bewegt den Zeiger vorwärts
+
+**Siehe auch**: [`readdir`](#14-readdir), [`closedir`](#15-closedir), [`getcwd`](#12-getcwd)
 
 ---
 
-### 14. `readdir` - Verzeichnis auflisten
+## 14. `readdir`
 
-**Parameter**: `(dir_fd: int)`  
-**Rückgabe**: `list (entries)`  
-**Fehler**: `INVALID_FD`, `IO_ERROR`
+**Beschreibung**: Liest und gibt alle Einträge aus einem offenen Verzeichnis zurück.
 
-Liest alle Einträge aus einem Verzeichnis.
-
-**Beispiel**:
-```python
-dir_fd = syscall(13, "C:\\Users\\Max")
-
-# Alle Einträge auflisten
-entries = syscall(14, dir_fd)
-
-for entry in entries:
-    print(f"Name: {entry['name']}")
-    print(f"  Typ: {'DIR' if entry['is_dir'] else 'FILE'}")
-    print(f"  Größe: {entry['size']}")
-    print()
-
-syscall(15, dir_fd)  # closedir
+**Signatur**:
 ```
+entries = readdir(dir_fd: int) → list[dict]
+```
+
+**Parameter**:
+- `dir_fd` (int): Verzeichnis-Deskriptor (von `opendir`)
+
+**Rückgabe**: 
+- `list[dict]`: Liste der Verzeichniseinträge (siehe unten)
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `IO_ERROR` (-7): I/O-Fehler beim Lesen
+
+**Verzeichnis-Eintrag** (dict-Schlüssel):
+- `name` (str): Datei-/Verzeichnisname
+- `is_dir` (bool): True, wenn Verzeichnis
+- `is_file` (bool): True, wenn reguläre Datei
+- `size` (int): Dateigröße in Bytes
+- `mtime` (int): Änderungszeit (Unix-Timestamp)
+
+**Beschreibung**:  
+Liest alle Einträge aus einem offenen Verzeichnis und gibt sie als Liste von Dicts zurück. Enthält Dateien und Unterverzeichnisse, typischerweise ohne `.` und `..`.
+
+**Hinweise**:
+- Rückgabe ist eine komplette Liste, nicht ein Iterator
+- Verzeichniseinträge sind üblicherweise **nicht sortiert**
+- Mit `.` und `..` (aktuelle und Eltern-Verzeichnis) ist abhängig von Implementierung
+- Schleife über `entries` um alle Einträge zu verarbeiten
+
+**Siehe auch**: [`opendir`](#13-opendir), [`closedir`](#15-closedir), [`stat`](#7-stat)
 
 ---
 
-### 15. `closedir` - Verzeichnis schließen
+## 15. `closedir`
 
-**Parameter**: `(dir_fd: int)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `INVALID_FD`, `IO_ERROR`
+**Beschreibung**: Schließt einen offenen Verzeichnis-Deskriptor.
 
-Schließt einen Verzeichnis-Deskriptor.
-
-**Beispiel**:
-```python
-dir_fd = syscall(13, "C:\\folder")
-entries = syscall(14, dir_fd)
-result = syscall(15, dir_fd)
-
-if result == 0:
-    print("Verzeichnis geschlossen")
+**Signatur**:
 ```
+result = closedir(dir_fd: int) → int
+```
+
+**Parameter**:
+- `dir_fd` (int): Verzeichnis-Deskriptor
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `IO_ERROR` (-7): I/O-Fehler beim Schließen
+
+**Beschreibung**:  
+Schließt einen mit [`opendir`](#13-opendir) geöffneten Verzeichnis-Deskriptor und gibt Ressourcen frei.
+
+**Hinweise**:
+- Muss für jeden mit `opendir` geöffneten Deskriptor aufgerufen werden
+- Nach dem Schließen darf der Deskriptor nicht mehr verwendet werden
+- Mehrmaliges Schließen erzeugt einen Fehler
+
+**Siehe auch**: [`opendir`](#13-opendir), [`readdir`](#14-readdir), [`close`](#2-close)
 
 ---
 
-### 16. `unlink` - Datei löschen
+## 16. `unlink`
 
-**Parameter**: `(path: str)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`, `IS_DIRECTORY`
+**Beschreibung**: Löscht eine Datei.
 
-Löscht eine Datei (Verzeichnis: siehe `rmdir`).
-
-**Beispiel**:
-```python
-# Datei löschen
-result = syscall(16, "C:\\temp\\old_file.txt")
-if result == 0:
-    print("Datei gelöscht")
-else:
-    print(f"Fehler: {result}")
-
-# Mehrere Dateien
-syscall(16, "C:\\logs\\debug.log")
-syscall(16, "C:\\logs\\error.log")
+**Signatur**:
 ```
+result = unlink(path: str) → int
+```
+
+**Parameter**:
+- `path` (str): Pfad der zu löschenden Datei
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Datei existiert nicht
+- `PERMISSION_DENIED` (-3): Keine Berechtigung zum Löschen
+- `IS_DIRECTORY` (-21): Pfad ist ein Verzeichnis (verwenden Sie [`rmdir`](#10-rmdir))
+
+**Beschreibung**:  
+Löscht eine reguläre Datei. Zum Löschen von Verzeichnissen, verwenden Sie [`rmdir`](#10-rmdir).
+
+**Hinweise**:
+- Kann nicht zum Löschen von Verzeichnissen verwendet werden
+- Die Datei muss nicht geschlossen sein (wird beim Löschen automatisch geschlossen)
+- Der übergeordnete Verzeichnis muss beschreibbar sein
+- Symlinks werden sich selbst gelöscht, nicht ihre Ziele
+
+**Siehe auch**: [`rmdir`](#10-rmdir), [`stat`](#7-stat)
 
 ---
 
-### 17. `rename` - Datei umbenennen
+## 17. `rename`
 
-**Parameter**: `(old_path: str, new_path: str)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`, `FILE_EXISTS`
+**Beschreibung**: Benennt eine Datei oder ein Verzeichnis um bzw. verschiebt es.
 
-Benennt eine Datei oder ein Verzeichnis um.
-
-**Beispiel**:
-```python
-# Einfach umbenennen
-result = syscall(17, "C:\\file_old.txt", "C:\\file_new.txt")
-
-# Verschieben + umbenennen
-result = syscall(17, "C:\\temp\\file.txt", "C:\\archive\\file_backup.txt")
-
-# Verzeichnis umbenennen
-result = syscall(17, "C:\\OldName", "C:\\NewName")
+**Signatur**:
 ```
+result = rename(old_path: str, new_path: str) → int
+```
+
+**Parameter**:
+- `old_path` (str): Aktueller Pfad (Datei oder Verzeichnis)
+- `new_path` (str): Neuer Pfad
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): `old_path` existiert nicht
+- `PERMISSION_DENIED` (-3): Keine Berechtigung
+- `FILE_EXISTS` (-20): `new_path` existiert bereits (auf manchen Systemen)
+
+**Beschreibung**:  
+Benennt eine Datei oder ein Verzeichnis um und/oder verschiebt es zu einem neuen Pfad.
+
+**Hinweise**:
+- Funktioniert für Dateien **und** Verzeichnisse
+- Kann auch als "move" Funktion verwendet werden (z.B. `rename("C:\\file.txt", "C:\\backup\\file.txt")`)
+- Auf vielen Systemen funktioniert nicht, wenn `new_path` existiert (abhängig von Betriebssystem)
+- Atomare Operation (entweder ganz oder gar nicht)
+
+**Siehe auch**: [`unlink`](#16-unlink), [`rmdir`](#10-rmdir)
 
 ---
 
-### 18. `truncate` - Datei kürzen
+## 18. `truncate`
 
-**Parameter**: `(path: str, size: int)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`, `IO_ERROR`
+**Beschreibung**: Kürzt eine Datei auf eine bestimmte Größe.
 
-Setzt Dateigröße auf `size` Bytes (kürzt oder füllt mit Nullen).
-
-**Beispiel**:
-```python
-# Datei auf 1000 Bytes kürzen
-result = syscall(18, "C:\\file.dat", 1000)
-
-# Datei löschen (auf 0 Bytes)
-syscall(18, "C:\\temp\\cache.tmp", 0)
-
-# Datei vergrößern (füllt mit Nullen)
-syscall(18, "C:\\sparse.bin", 10000)
+**Signatur**:
 ```
+result = truncate(path: str, size: int) → int
+```
+
+**Parameter**:
+- `path` (str): Dateipfad
+- `size` (int): Neue Dateigröße in Bytes
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Datei existiert nicht
+- `PERMISSION_DENIED` (-3): Keine Berechtigung
+- `IO_ERROR` (-7): I/O-Fehler
+
+**Beschreibung**:  
+Ändert die Dateigröße auf exakt `size` Bytes. Wenn die Datei größer war, wird sie gekürzt. Wenn sie kleiner war, wird sie mit Null-Bytes gefüllt.
+
+**Hinweise**:
+- Wird oft zum Löschen des Dateiinhalts verwendet: `truncate(path, 0)`
+- Zum Vergrößern einer Datei (sparse files): `truncate(path, 10000)` → 10000 Bytes mit Nullen
+- Die Datei wird **nicht geöffnet**, sondern direkt nach Pfad manipuliert
+- Setzt den Dateizeiger auf den Anfang (wenn die Datei später geöffnet wird)
+
+**Siehe auch**: [`open`](#1-open), [`write`](#4-write), [`seek`](#5-seek)
 
 ---
 
-### 19. `chmod` - Berechtigungen ändern
+## 19. `chmod`
 
-**Parameter**: `(path: str, mode: int)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`
+**Beschreibung**: Ändert die Berechtigungen einer Datei oder eines Verzeichnisses.
 
-Ändert Datei-Berechtigungen (oktal).
-
-**Beispiel**:
-```python
-# Lesen/Schreiben für Besitzer
-syscall(19, "C:\\file.txt", 0o644)
-
-# Vollzugriff für Besitzer, nur Lesen für andere
-syscall(19, "C:\\script.py", 0o755)
-
-# Nur Lesen
-syscall(19, "C:\\readonly.txt", 0o444)
+**Signatur**:
 ```
+result = chmod(path: str, mode: int) → int
+```
+
+**Parameter**:
+- `path` (str): Dateipfad
+- `mode` (int): Neue Berechtigungen (oktal, z.B. `0o644`, `0o755`)
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Datei existiert nicht
+- `PERMISSION_DENIED` (-3): Keine Berechtigung (normalerweise: nicht Besitzer)
+
+**Berechtigungen** (oktal):
+- `0o644`: `-rw-r--r--` (Besitzer Lesen/Schreiben, andere Lesen)
+- `0o755`: `-rwxr-xr-x` (Besitzer alles, andere Lesen/Ausführung)
+- `0o600`: `-rw-------` (Nur Besitzer)
+- `0o700`: `-rwx------` (Nur Besitzer, mit Ausführung)
+- `0o400`: `-r--------` (Nur Lesen, Besitzer)
+
+**Beschreibung**:  
+Ändert die Dateiberechtigungen (rwx für Besitzer/Gruppe/andere). Nur der Besitzer der Datei kann dies normalerweise durchführen.
+
+**Hinweise**:
+- Berechtigungen sind **oktal** (z.B. `0o755` nicht `755`)
+- Erste Ziffer für Besitzer, zweite für Gruppe, dritte für andere
+- `r` (4) = Lesen, `w` (2) = Schreiben, `x` (1) = Ausführen
+- Windows-Unterstützung kann begrenzt sein (typisch: nur Read-Only und Vollzugriff)
+- Umask des Prozesses beeinflusst nicht `chmod` (anders als `mkdir`)
+
+**Siehe auch**: [`chown`](#20-chown), [`stat`](#7-stat)
 
 ---
 
-### 20. `chown` - Besitzer ändern
+## 20. `chown`
 
-**Parameter**: `(path: str, uid: int, gid: int)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `FILE_NOT_FOUND`, `PERMISSION_DENIED`
+**Beschreibung**: Ändert den Besitzer und/oder die Gruppe einer Datei.
 
-Ändert Besitzer und Gruppe (UID/GID).
-
-**Beispiel**:
-```python
-# Besitzer und Gruppe ändern
-result = syscall(20, "C:\\file.txt", 1000, 1000)
-
-# Nur Besitzer ändern (GID = -1 für keine Änderung)
-syscall(20, "C:\\file.txt", 1001, -1)
+**Signatur**:
 ```
+result = chown(path: str, uid: int, gid: int) → int
+```
+
+**Parameter**:
+- `path` (str): Dateipfad
+- `uid` (int): Neue Besitzer-UID (oder `-1` zum Beibehalten)
+- `gid` (int): Neue Besitzer-GID (oder `-1` zum Beibehalten)
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `FILE_NOT_FOUND` (-4): Datei existiert nicht
+- `PERMISSION_DENIED` (-3): Keine Berechtigung (normalerweise: nicht Root)
+
+**Beschreibung**:  
+Ändert den Besitzer und/oder die Gruppe einer Datei. Auf POSIX-Systemen normalerweise nur von Root durchführbar.
+
+**Hinweise**:
+- Verwenden Sie `-1` für `uid` oder `gid` um diese nicht zu ändern
+- Normalerweise nur Root kann Besitzer ändern
+- Auf Windows-Systemen kann diese Operation nicht unterstützt sein
+- Nützlich für Server/Daemon-Prozesse, die Dateiberechtigungen übernehmen
+
+**Siehe auch**: [`chmod`](#19-chmod), [`stat`](#7-stat)
 
 ---
 
-### 21. `access` - Zugriff prüfen
+## 21. `access`
 
-**Parameter**: `(path: str, mode: int)`  
-**Rückgabe**: `int (0=ja, -1=nein)`  
-**Fehler**: None
+**Beschreibung**: Prüft, ob ein Benutzer eine bestimmte Art von Zugriff auf eine Datei hat.
 
-Prüft Zugriff ohne zu öffnen. Mode: 4=Lesen, 2=Schreiben, 1=Ausführen, 0=Existiert
-
-**Beispiel**:
-```python
-# Datei existiert?
-exists = syscall(21, "C:\\file.txt", 0)
-print(f"Existiert: {exists == 0}")
-
-# Lesbar?
-readable = syscall(21, "C:\\file.txt", 4)
-
-# Schreibbar?
-writable = syscall(21, "C:\\file.txt", 2)
-
-# Kombiniert
-accessible = syscall(21, "C:\\file.txt", 6)  # 4+2 = Lesen + Schreiben
+**Signatur**:
 ```
+result = access(path: str, mode: int) → int
+```
+
+**Parameter**:
+- `path` (str): Dateipfad
+- `mode` (int): Zugriffsmodus zu prüfen: `0` = Existiert, `1` = Ausführbar, `2` = Beschreibbar, `4` = Lesbar
+
+**Rückgabe**: 
+- `0`: Zugriff erlaubt (oder Datei existiert)
+- `-1`: Zugriff verweigert (oder Datei existiert nicht)
+
+**Fehler**: Keine (gibt nur `0` oder `-1` zurück)
+
+**Zugriffsmodi**:
+- `0`: Prüfe, ob Datei existiert
+- `1`: Prüfe, ob ausführbar
+- `2`: Prüfe, ob beschreibbar
+- `4`: Prüfe, ob lesbar
+
+**Beschreibung**:  
+Testet, ob der aktuelle Benutzer eine bestimmte Art von Zugriff auf eine Datei hat, ohne die Datei zu öffnen. Nützlich für Fehlerbehandlung vor `open`.
+
+**Hinweise**:
+- Rückgabe ist einfach: `0` (Zugriff OK) oder `-1` (Zugriff verweigert)
+- Modi können kombiniert werden (bitwise OR): z.B. `access(path, 4|2)` für Lesen + Schreiben
+- Diese Funktion prüft tatsächliche Berechtigungen zum Zeitpunkt des Aufrufs
+- Zwischen `access` und `open` können Berechtigungen sich ändern (TOCTOU)
+
+**Siehe auch**: [`open`](#1-open), [`stat`](#7-stat), [`chmod`](#19-chmod)
 
 ---
 
-### 22. `flush` - Puffer schreiben
+## 22. `flush`
 
-**Parameter**: `(fd: int)`  
-**Rückgabe**: `int (0=success)`  
-**Fehler**: `INVALID_FD`, `IO_ERROR`
+**Beschreibung**: Schreibt gepufferte Daten für einen offenen Datei-Deskriptor in den Speicher.
 
-Schreibt gepufferte Daten sofort in Datei.
-
-**Beispiel**:
-```python
-fd = syscall(1, "C:\\output.txt", "w")
-
-# Daten schreiben
-syscall(4, fd, "Line 1\n")
-syscall(4, fd, "Line 2\n")
-
-# Sofort in Datei schreiben
-result = syscall(22, fd)
-
-# Mehr Daten
-syscall(4, fd, "Line 3\n")
-syscall(22, fd)
-
-syscall(2, fd)  # close
+**Signatur**:
 ```
+result = flush(fd: int) → int
+```
+
+**Parameter**:
+- `fd` (int): Datei-Deskriptor
+
+**Rückgabe**: 
+- `0`: Erfolg
+- Negativ: Fehlercode
+
+**Fehler**:
+- `INVALID_FD` (-1): Deskriptor ist ungültig
+- `IO_ERROR` (-7): I/O-Fehler beim Schreiben
+
+**Beschreibung**:  
+Schreibt alle gepufferten Daten für einen Datei-Deskriptor tatsächlich auf die Festplatte. Wird verwendet um sicherzustellen, dass Daten nach `write` nicht nur im RAM verbleiben.
+
+**Hinweise**:
+- `write` kann Daten in einen Puffer schreiben, nicht direkt auf Disk
+- `flush` zwingt den Puffer zur Festplatte zu synchronisieren
+- Wird automatisch bei `close` aufgerufen
+- Wichtig für kritische Daten (z.B. Datenbankeinträge, Log-Dateien)
+- Performance-Impakt: `flush` ist langsamer als `write`
+
+**Siehe auch**: [`write`](#4-write), [`close`](#2-close)
 
 ---
 
-## Häufige Muster
+## Error Codes (Fehler-Referenz)
 
-### Datei komplett lesen
-
-```python
-def read_entire_file(path):
-    fd = syscall(1, path, "r")
-    if fd < 0:
-        return None
-    
-    content = ""
-    while True:
-        chunk = syscall(3, fd, 4096)
-        if not chunk:
-            break
-        content += chunk
-    
-    syscall(2, fd)
-    return content
-
-# Anwendung
-content = read_entire_file("C:\\Users\\Max\\document.txt")
-print(content)
-```
-
-### Verzeichnis rekursiv traversieren
-
-```python
-def list_dir_recursive(path, indent=0):
-    dir_fd = syscall(13, path)
-    if dir_fd < 0:
-        return
-    
-    entries = syscall(14, dir_fd)
-    syscall(15, dir_fd)
-    
-    for entry in entries:
-        full_path = path + "\\" + entry['name']
-        print("  " * indent + entry['name'])
-        
-        if entry['is_dir']:
-            list_dir_recursive(full_path, indent + 1)
-
-# Anwendung
-list_dir_recursive("C:\\Users\\Max")
-```
-
-### Datei zeilenweise lesen
-
-```python
-def read_lines(path):
-    fd = syscall(1, path, "r")
-    if fd < 0:
-        return []
-    
-    lines = []
-    buffer = ""
-    
-    while True:
-        chunk = syscall(3, fd, 1024)
-        if not chunk:
-            if buffer:
-                lines.append(buffer)
-            break
-        
-        buffer += chunk
-        while "\n" in buffer:
-            line, buffer = buffer.split("\n", 1)
-            lines.append(line)
-    
-    syscall(2, fd)
-    return lines
-
-# Anwendung
-for line in read_lines("C:\\log.txt"):
-    print(line)
-```
+| Fehler | Code | Bedeutung |
+|--------|------|----------|
+| `SUCCESS` | 0 | Erfolgreich |
+| `INVALID_FD` | -1 | Ungültiger Datei-Deskriptor |
+| `PERMISSION_DENIED` | -3 | Berechtigung verweigert |
+| `FILE_NOT_FOUND` | -4 | Datei nicht gefunden |
+| `INVALID_ARGUMENT` | -6 | Ungültiges Argument |
+| `IO_ERROR` | -7 | Ein-/Ausgabe-Fehler |
+| `FILE_EXISTS` | -20 | Datei/Verzeichnis existiert bereits |
+| `IS_DIRECTORY` | -21 | Pfad ist ein Verzeichnis |
+| `NOT_DIRECTORY` | -22 | Pfad ist kein Verzeichnis |
+| `PATH_NOT_FOUND` | -23 | Pfad nicht gefunden |
+| `DIR_NOT_EMPTY` | -24 | Verzeichnis nicht leer |
 
 ---
 
-## Verwandte Kategorien
-
-- [← Zurück zur Übersicht](README.md)
-- [Nächste: Process Management →](02-ProcessManagement.md)
-- [Device I/O & Control](06-DeviceIO.md)
-- [Miscellaneous](10-Miscellaneous.md)
-
----
-
-**Kategorie**: File I/O & Filesystem (IDs 1-22)  
-**Letztes Update**: 2026-04-23
+**Dokumentversion**: 1.0  
+**Zuletzt aktualisiert**: 2026-04-24

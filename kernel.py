@@ -41,17 +41,18 @@ class Kernel:
 
         # Seting up the Subsystems
         
+        self.drivers_manager.load("ntfs")
         self.add_syscall_subroutines()
         self.load_syscalls()
 
         # Start the init process
         #self.tui.update()
         self.logger.log(1,"Start-Up Finished")
-        self.drivers_manager.load("ntfs")
         self.load_init_process()
         #self.load_init_process(1)
         while self.sheduler.runnable():
             self.sheduler.loop()
+            #Run all Subroutines
             
         self.panic(KernelError.NoProcess)
 
@@ -91,7 +92,7 @@ class Kernel:
         # Load the syscalls into the syscall manager
         try:
             for syscall_id, function in enumerate(self.syscall):
-                self.syscall_manager.register_syscall(syscall_id + 1, function)  # Syscall IDs start from 1
+                self.syscall_manager.register_syscall(syscall_id + 0, function)  # Syscall IDs start from 1
         except SyscallAllreadyRegisteredException as e:
             print(f"Error loading syscalls: {e}")
     def setup_syscalls(self):
@@ -99,8 +100,9 @@ class Kernel:
         self.syscall_manager.add_file_syscalls(self.drivers_manager.drivers["ntfs"])
 
         def syscall_create_process(args):
-            file= args["path"]
+            file= args
             if file != "":
+                return 1
                 fhid = self.syscall_manager.handle_syscall(1,file)
                 code = self.syscall_manager.handle_syscall(3,(fhid, -1))
                 process = self.create_process("IDK",str(code))

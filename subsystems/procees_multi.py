@@ -1,7 +1,7 @@
 from typing import Any
 from .logging import Logger
 from greenlet import greenlet
-
+from .common import SyscallReturn, SyscallReturnType
 
 class Process:
     def __init__(self, pid: int, name: str, manager_greenlet):
@@ -26,7 +26,19 @@ class Process:
         # Syscall direkt hier verarbeiten – kein Umweg über Kernel nötig
         if self.syscall_mgr:
             ret = self.syscall_mgr.handle_syscall(syscall_id, args)
+            if isinstance(ret, SyscallReturn):
+                if ret.type == SyscallReturnType.Succes:
+                    ret = ret.value
+                elif ret.type == SyscallReturnType.Wait:
+                    # Prozess soll warten – Scheduler wird entscheiden, wann er wieder dran ist
+                    self.state = "waiting"
+                    self._mgr_gl.switch()
+                    return None  # Rückgabewert für den Prozess ist in diesem Fall nicht relevant
+                elif ret.type == SyscallReturnType.Error:
+                    print(f"Error in syscall {syscall_id} with args {args}: {ret.value}")
+                    return None
             self.namespace["ret"] = ret
+
         # Einen Schritt fertig → zurück zum ProcessManager
         self._mgr_gl.switch()
         return self.namespace.get("ret")
@@ -66,7 +78,7 @@ class ProcessManager:
             del self.processes[pid]
 
     def run(self, pid: int):
-        """Gleiche Schnittstelle wie vorher – Scheduler merkt keinen Unterschied."""
+        """Gleiche Schnittstelle wie vorher - Scheduler merkt keinen Unterschied."""
         process: Process | None = self.processes.get(pid)
         if process is None or process.state == "terminated":
             return
@@ -78,5 +90,3 @@ class ProcessManager:
             procc._gl.switch()
 
             # Hier sind wir wieder wenn syscall() aufgerufen wurde oder Prozess fertig ist
-            if procc.state != "terminated":
-                procc.state = "ready"
