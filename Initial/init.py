@@ -1,13 +1,13 @@
+def require_tui():syscall(301)
 
-from myos import *
+def unlock_tui():syscall(302)
+
+def printl(text):syscall(304,text)
 
 pid = ret
 
 require_tui()
 
-ret = 12
-
-for i in range(1000):
-    print(f"Running process {pid} with x={x} and i={i}")
+printl(f"Running process {pid} with x=12 and i=22")
 
 unlock_tui()

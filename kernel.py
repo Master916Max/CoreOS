@@ -29,7 +29,7 @@ class Kernel:
         self.syscall_manager =      SyscallManager()
         self.process_manager =      ProcessManager()
         self.sheduler =             Sheduler(self.process_manager.get_process,self.process_manager.run)
-        self.tui =                  TextUserInterface(screen)
+        self.tui =                  TextUserInterface(screen, self.sheduler)
         self.drivers_manager =      DriverManager()
         self.dll_manager =          DLLManager()
         self.service_manager =      ServiceManager()
@@ -49,6 +49,7 @@ class Kernel:
         #self.tui.update()
         self.logger.log(1,"Start-Up Finished")
         self.load_init_process()
+        self.load_init_process(3)
         #self.load_init_process(1)
         while self.sheduler.runnable():
             self.sheduler.loop()
@@ -98,6 +99,7 @@ class Kernel:
     def setup_syscalls(self):
         
         self.syscall_manager.add_file_syscalls(self.drivers_manager.drivers["ntfs"])
+        self.syscall_manager.add_tui_syscalls(self.tui)
 
         def syscall_create_process(args):
             file= args
@@ -120,7 +122,6 @@ class Kernel:
         # This method can be expanded to include more complex syscall subroutines
         pass
 
-
     def panic(self, error:KernelError):
         self.tui.print_line("--------Kernel-Panic--------")
         match error:
@@ -131,7 +132,9 @@ class Kernel:
     def shutdown(self):
         pass
 
-
+    def subroutines(self):
+        self.tui.update_waiting_queue()
+        self.sheduler.test_for_ruannable()
 
 
 if __name__ == "__main__":

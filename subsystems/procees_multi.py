@@ -22,12 +22,13 @@ class Process:
     def setup_namespace(self, syscall_manager: Any):
         self.syscall_mgr = syscall_manager
 
-    def _syscall_handler(self, syscall_id: int, args):
+    def _syscall_handler(self, syscall_id: int, args=None):
         # Syscall direkt hier verarbeiten – kein Umweg über Kernel nötig
         if self.syscall_mgr:
-            ret = self.syscall_mgr.handle_syscall(syscall_id, args)
+            ret = self.syscall_mgr.handle_syscall(self.pid,syscall_id, args)
             if isinstance(ret, SyscallReturn):
                 if ret.type == SyscallReturnType.Succes:
+                    self.state = "ready"
                     ret = ret.value
                 elif ret.type == SyscallReturnType.Wait:
                     # Prozess soll warten – Scheduler wird entscheiden, wann er wieder dran ist

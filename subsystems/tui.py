@@ -1,17 +1,19 @@
 from .logging import Logger
 import pygame
+from .sheduler import Sheduler
 
 from .common import SyscallReturn,SyscallReturnType
 
 class TextUserInterface:
-    def __init__(self, screen):
+    def __init__(self, screen, shedueler: Sheduler):
         self.screen = screen
         self.font = pygame.font.SysFont('Arial', 24)
         self.text_color = (255, 255, 255)  # White color
         self.background_color = (0, 0, 0)    # Black color
 
         self.lock = 0
-
+        self.waiting_queue = []
+        self.shedueler : Sheduler = shedueler
 
 
         self.height = screen.get_height() // self.font.render("ABC", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
@@ -29,9 +31,7 @@ class TextUserInterface:
         self.logger = Logger()
 
         self.logger.log(0,"TUI init successful.")
-        self.logger.log(0,f"TUI DATA:\nHeight:{self.height}\nWidth:{self.width}\nInput?:{self.input_aktive}")
-
-        
+        self.logger.log(0,f"TUI DATA:\nHeight:{self.height}\nWidth:{self.width}\nInput?:{self.input_aktive}")      
 
     def draw_text(self, text, position):
         text_surface = self.font.render(text, True, self.text_color)
@@ -71,9 +71,27 @@ class TextUserInterface:
             self.lock = pid
             return SyscallReturn(SyscallReturnType.Succes, 0)
         else:
+            self.waiting_queue.append(pid)
+            self.shedueler.block_process(pid)
+            return SyscallReturn(SyscallReturnType.Wait,0)
 
     def unlock_tui(self, pid):
         if self.lock == pid:
             self.lock = 0
+            return SyscallReturn(SyscallReturnType.Succes, 0)
+        else:
+            return SyscallReturn(SyscallReturnType.Error,-3)
+    
+    def update_waiting_queue(self):
+        if self.lock == 0 and len(self.waiting_queue) > 0:
+            next_pid = self.waiting_queue[0]
+            if self.require_tui(next_pid).type == SyscallReturnType.Succes:
+                self.waiting_queue.remove(next_pid)
+                self.shedueler.unblock_process(next_pid)
+                                                
 
-    def print(self, text):
+    def print(self,pid, text):
+        if pid == self.lock:
+            self.print_line(text)
+            self.update()
+            return SyscallReturn(SyscallReturnType.Succes, 1)

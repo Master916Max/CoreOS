@@ -32,8 +32,9 @@ class Sheduler:
             #self.logger.log(1,"Running Pid:" + str(pid_to_run))
             if pid_to_run and not pid_to_run == 0:
                 self.run_process(pid_to_run)
-                self.waiting_queue.append(pid_to_run)
-                self.ready_queue.remove(pid_to_run)
+               # if pid_to_run in self.ready_queue:
+                    #self.ready_queue.remove(pid_to_run)
+                    #self.ready_queue.append(pid_to_run)
 
     def runnable(self):
         self.test_for_ruannable()
@@ -65,4 +66,16 @@ class Sheduler:
         
         for pid in ready_to_delete:
             self.waiting_queue.remove(pid)
+    
+    def block_process(self,pid):
+        if pid in self.ready_queue:
+            self.ready_queue.remove(pid)
+        if pid not in self.waiting_queue:
+            self.waiting_queue.append(pid)
+    
+    def unblock_process(self,pid):
+        if pid in self.waiting_queue:
+            self.waiting_queue.remove(pid)
+        if pid not in self.ready_queue:
+            self.ready_queue.append(pid)
 

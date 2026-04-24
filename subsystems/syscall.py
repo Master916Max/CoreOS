@@ -18,8 +18,8 @@ class Syscall:
         self.syscall_id = syscall_id
         self.function = function
     
-    def redirect(self, args) -> Any:
-        return self.function(args)
+    def redirect(self,pid:int, args) -> Any:
+        return self.function(pid,args)
 
 class SyscallManager:
     def __init__(self):
@@ -32,13 +32,13 @@ class SyscallManager:
             raise SyscallAllreadyRegisteredException(f"Syscall with ID {syscall_id} is already registered.")
         self.syscalls[syscall_id] = Syscall(syscall_id, function)
 
-    def handle_syscall(self, syscall_id: int, args) -> Any:
+    def handle_syscall(self,pid: int, syscall_id: int, args) -> Any:
         self.logger.log(1,f"Called Syscall ID: {syscall_id} with: {args}")
         if syscall_id in self.syscalls:
             try:
                 for subroutine in self.subroutines:
                     subroutine()
-                return self.syscalls[syscall_id].redirect(args)
+                return self.syscalls[syscall_id].redirect(pid,args)
             except Exception as e:
                 raise SyscallErrorException(f"Error occurred while handling syscall {syscall_id}: {e}")
         else:
@@ -51,30 +51,32 @@ class SyscallManager:
 
     def add_file_syscalls(self, driver):
         #Open
-        def l_open(path,mode):
+        def l_open(pid, args):
+            path = args[0]
+            mode = args[1]
             return driver.run("open", path,mode)
         #Close
-        def close(args):
+        def close(pid,args):
             FH = args[0]
             return driver.run("close", FH)
         #Read
-        def read(args):
+        def read(pid,args):
             FH = args[0]
             size = args[1]
             return driver.run("read", FH,size)
         #Write
-        def write(args):
+        def write(pid,args):
             FH = args[0]
             data = args[1]
             return driver.run("write", FH, data)
         #Seek
-        def seek(args):
+        def seek(pid,args):
             FH = args[0]
             offset = args[1]
             whence = args[2]
             return driver.run("seek", FH, offset, whence)
         #tell
-        def tell(args):
+        def tell(pid,args):
             FH = args[0]
             return driver.run("tell", FH)
         open_sys = Syscall(1,l_open)
@@ -90,3 +92,15 @@ class SyscallManager:
         self.syscalls[4] = write_sys
         self.syscalls[5] = seek_sys
         self.syscalls[6] = tell_sys
+
+    def add_tui_syscalls(self, tui):
+        def require_tui(pid,args):
+            return tui.require_tui(pid)
+        def unlock_tui(pid,args):
+            return tui.unlock_tui(pid)
+        def printl(pid,args):
+            text = args
+            return tui.print(pid, text)
+        self.syscalls[301] = Syscall(301,require_tui)
+        self.syscalls[302] = Syscall(302,unlock_tui)
+        self.syscalls[304] = Syscall(304,printl)

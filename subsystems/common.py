@@ -11,3 +11,5 @@ class SyscallReturn:
         self.type = typee
         self.value = value
     
+class ErrorCode(Enum):
+    pass
