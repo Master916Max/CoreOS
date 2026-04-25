@@ -24,7 +24,11 @@ class Kernel:
         self.multi_aktive = True
         self.logger = Logger()
 
+        self.system_data = {}
 
+        self.upper_os_get_data()
+        self.print_system_data()
+        
         # Initialize the Subsystems
         self.syscall_manager =      SyscallManager()
         self.process_manager =      ProcessManager()
@@ -122,6 +126,8 @@ class Kernel:
         # This method can be expanded to include more complex syscall subroutines
         pass
 
+    # Kernel Methodes
+
     def panic(self, error:KernelError):
         self.tui.print_line("--------Kernel-Panic--------")
         match error:
@@ -136,12 +142,123 @@ class Kernel:
         self.tui.update_waiting_queue()
         self.sheduler.test_for_ruannable()
 
+    def upper_os_get_data(self):
+        import psutil
+        import platform
+        cpu_freq = psutil.cpu_freq()
+        ram      = psutil.virtual_memory()
+        disk     = psutil.disk_usage('/')
+        net      = psutil.net_io_counters()
+        battery  = psutil.sensors_battery()
+
+        self.system_data = {
+            "cpu": {
+                "percent":      psutil.cpu_percent(interval=0.1),
+                "cores_phys":   psutil.cpu_count(logical=False),
+                "cores_logic":  psutil.cpu_count(logical=True),
+                "freq_mhz":     round(cpu_freq.current, 1) if cpu_freq else None,
+                "freq_max_mhz": round(cpu_freq.max, 1)     if cpu_freq else None,
+            },
+            "ram": {
+                "total_mb":     round(ram.total     / 1024**2, 1),
+                "used_mb":      round(ram.used      / 1024**2, 1),
+                "available_mb": round(ram.available / 1024**2, 1),
+                "percent":      ram.percent,
+            },
+            "disk": {
+                "total_gb":  round(disk.total / 1024**3, 1),
+                "used_gb":   round(disk.used  / 1024**3, 1),
+                "free_gb":   round(disk.free  / 1024**3, 1),
+                "percent":   disk.percent,
+            },
+            "network": {
+                "bytes_sent_mb": round(net.bytes_sent / 1024**2, 2),
+                "bytes_recv_mb": round(net.bytes_recv / 1024**2, 2),
+                "packets_sent":  net.packets_sent,
+                "packets_recv":  net.packets_recv,
+            },
+            "battery": {
+                "percent":  battery.percent          if battery else None,
+                "plugged":  battery.power_plugged    if battery else None,
+                "secs_left": battery.secsleft        if battery else None,
+            },
+            "system": {
+                "os":       platform.system(),
+                "version":  platform.version(),
+                "machine":  platform.machine(),
+                "python":   platform.python_version(),
+                "hostname": platform.node(),
+            }
+        }
+    def print_system_data(self):
+        d = self.system_data
+
+        def bar(percent, width=20):
+            filled = int(width * percent / 100)
+            return f"[{'█' * filled}{'░' * (width - filled)}] {percent:.1f}%"
+
+        print("╔══════════════════════════════════════╗")
+        print("║          SYSTEM INFORMATION          ║")
+        print("╠══════════════════════════════════════╣")
+
+        # System
+        s = d["system"]
+        print("║  🖥  SYSTEM                           ║")
+        print(f"║  OS       : {s['os']} {s['version'][:20]:<20} ║")
+        print(f"║  Hostname : {s['hostname']:<25} ║")
+        print(f"║  Machine  : {s['machine']:<25} ║")
+        print(f"║  Python   : {s['python']:<25} ║")
+        print("╠══════════════════════════════════════╣")
+
+        # CPU
+        c = d["cpu"]
+        print("║  ⚙  CPU                               ║")
+        print(f"║  Cores    : {c['cores_phys']} physical / {c['cores_logic']} logical{'':<8} ║")
+        print(f"║  Freq     : {c['freq_mhz']} MHz (max {c['freq_max_mhz']} MHz){'':<3} ║")
+        print(f"║  Load     : {bar(c['percent'])}  ║")
+        print("╠══════════════════════════════════════╣")
+
+        # RAM
+        r = d["ram"]
+        print("║  🧠 RAM                               ║")
+        print(f"║  {r['used_mb']:.0f} MB / {r['total_mb']:.0f} MB ({r['available_mb']:.0f} MB free){'':<4} ║")
+        print(f"║  Usage    : {bar(r['percent'])}  ║")
+        print("╠══════════════════════════════════════╣")
+
+        # Disk
+        dk = d["disk"]
+        print("║  💾 DISK                              ║")
+        print(f"║  {dk['used_gb']:.1f} GB / {dk['total_gb']:.1f} GB ({dk['free_gb']:.1f} GB free){'':<4} ║")
+        print(f"║  Usage    : {bar(dk['percent'])}  ║")
+        print("╠══════════════════════════════════════╣")
+
+        # Network
+        n = d["network"]
+        print("║  🌐 NETWORK                           ║")
+        print(f"║  Sent     : {n['bytes_sent_mb']:.2f} MB ({n['packets_sent']} packets){'':<4} ║")
+        print(f"║  Received : {n['bytes_recv_mb']:.2f} MB ({n['packets_recv']} packets){'':<4} ║")
+        print("╠══════════════════════════════════════╣")
+
+        # Battery
+        b = d["battery"]
+        print("║  🔋 BATTERY                           ║")
+        if b["percent"] is None:
+            print("║  No battery detected                  ║")
+        else:
+            status = "Plugged in" if b["plugged"] else "On battery"
+            secs   = b["secs_left"]
+            left   = f"{secs//3600}h {(secs%3600)//60}m" if secs and secs > 0 else "–"
+            print(f"║  Status   : {status:<25} ║")
+            print(f"║  Time left: {left:<25} ║")
+            print(f"║  Charge   : {bar(b['percent'])}  ║")
+
+        print("╚══════════════════════════════════════╝")
 
 if __name__ == "__main__":
     import pygame
 
     pygame.init()
-    screen = pygame.display.set_mode((800, 600))
+    screen = pygame.display.set_mode((3840, 2160),pygame.FULLSCREEN)
 
     kernel = Kernel(screen)
 

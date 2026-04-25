@@ -4,6 +4,14 @@ from .sheduler import Sheduler
 
 from .common import SyscallReturn,SyscallReturnType
 
+class Line:
+    def __init__(self, text: str, color: tuple[int,int,int] = (255,255,255)):
+        self.text = text
+        self.color = color
+    
+    def render(self, font):
+        return font.render(self.text, True, self.color)
+
 class TextUserInterface:
     def __init__(self, screen, shedueler: Sheduler):
         self.screen = screen
@@ -63,6 +71,8 @@ class TextUserInterface:
             else:
                 continue
         self.update()
+
+
 
     # Syscalls
 
