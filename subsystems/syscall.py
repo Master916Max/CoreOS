@@ -1,5 +1,3 @@
-from ast import arg
-from itertools import tee
 from types import FunctionType, MethodType
 from typing import Any
 from .logging import Logger
@@ -33,7 +31,6 @@ class SyscallManager:
         self.syscalls[syscall_id] = Syscall(syscall_id, function)
 
     def handle_syscall(self,pid: int, syscall_id: int, args) -> Any:
-        self.logger.log(1,f"Called Syscall ID: {syscall_id} with: {args}")
         if syscall_id in self.syscalls:
             try:
                 for subroutine in self.subroutines:

@@ -11,38 +11,40 @@ from subsystems.drivers import DriverManager
 from subsystems.dlls import DLLManager
 from subsystems.services import ServiceManager
 
-#Debug Context
-from subsystems.debug import Debug
-
 class KernelError(Enum):
-    NoProcess = 0
+    NoProcess = 0,
+    InirFailed = 1,
+
 
 class Kernel:
     def __init__(self, screen: Any):
-        # Initialize the kernel and set up necessary components
-        self.screen = screen
-        self.multi_aktive = True
-        self.logger = Logger()
+        try:
+            # Initialize the kernel and set up necessary components
+            self.screen = screen
+            self.multi_aktive = True
+            self.logger = Logger()
 
-        self.system_data = {}
+            self.system_data = {}
 
-        self.upper_os_get_data()
-        self.print_system_data()
-        
-        # Initialize the Subsystems
-        self.syscall_manager =      SyscallManager()
-        self.process_manager =      ProcessManager()
-        self.sheduler =             Sheduler(self.process_manager.get_process,self.process_manager.run)
-        self.tui =                  TextUserInterface(screen, self.sheduler)
-        self.drivers_manager =      DriverManager()
-        self.dll_manager =          DLLManager()
-        self.service_manager =      ServiceManager()
+            self.upper_os_get_data()
+            #self.print_system_data()
+
+            # Initialize the Subsystems
+            self.syscall_manager =      SyscallManager()
+            self.process_manager =      ProcessManager()
+            self.sheduler =             Sheduler(self.process_manager.get_process,self.process_manager.run)
+            self.tui =                  TextUserInterface(screen, self.sheduler)
+            self.drivers_manager =      DriverManager()
+            self.dll_manager =          DLLManager()
+            self.service_manager =      ServiceManager()
 
 
-        # Seting up the Subsystems Variables
+            # Seting up the Subsystems Variables
 
-        self.syscall = []
-
+            self.syscall = []
+        except Exception as e:
+            self.panic(KernelError.InirFailed)
+            print(f"Kernel initialization failed: {e}")
         # Seting up the Subsystems
         
         self.drivers_manager.load("ntfs")
