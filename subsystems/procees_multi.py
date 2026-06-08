@@ -17,13 +17,12 @@ class Process:
 
     def load_code(self, code: str):
         self.code = code
-        self._gl  = greenlet(self._laufen)
+        self._gl  = greenlet(self._run)
 
     def setup_namespace(self, syscall_manager: Any):
         self.syscall_mgr = syscall_manager
 
     def _syscall_handler(self, syscall_id: int, args=None):
-        # Syscall direkt hier verarbeiten – kein Umweg über Kernel nötig
         if self.syscall_mgr:
             ret = self.syscall_mgr.handle_syscall(self.pid,syscall_id, args)
             if isinstance(ret, SyscallReturn):
@@ -31,20 +30,16 @@ class Process:
                     self.state = "ready"
                     ret = ret.value
                 elif ret.type == SyscallReturnType.Wait:
-                    # Prozess soll warten – Scheduler wird entscheiden, wann er wieder dran ist
                     self.state = "waiting"
                     self._mgr_gl.switch()
-                    return None  # Rückgabewert für den Prozess ist in diesem Fall nicht relevant
                 elif ret.type == SyscallReturnType.Error:
                     print(f"Error in syscall {syscall_id} with args {args}: {ret.value}")
                     return None
             self.namespace["ret"] = ret
-
-        # Einen Schritt fertig → zurück zum ProcessManager
         self._mgr_gl.switch()
         return self.namespace.get("ret")
 
-    def _laufen(self):
+    def _run(self):
         self.state = "running"
         self.namespace.update({"syscall": self._syscall_handler})
         try:
@@ -79,15 +74,14 @@ class ProcessManager:
             del self.processes[pid]
 
     def run(self, pid: int):
-        """Gleiche Schnittstelle wie vorher - Scheduler merkt keinen Unterschied."""
         process: Process | None = self.processes.get(pid)
         if process is None or process.state == "terminated":
             return
         if isinstance(process, Process):
-            procc: Process = process
-            procc.state = "running"
-
-            # Erster Aufruf: Greenlet starten. Danach: fortsetzen.
-            procc._gl.switch()
-
-            # Hier sind wir wieder wenn syscall() aufgerufen wurde oder Prozess fertig ist
+            process: Process = process
+            process.state = "running"
+            process._gl.switch()
+        
+        if process.state == "terminated":
+            self.terminate_process(pid)
+            return "finished"

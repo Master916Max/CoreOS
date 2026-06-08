@@ -1,76 +1,217 @@
+from time import time
 import time
 from enum import Enum
 from typing import Any
+import pygame
 
-from subsystems.syscall import SyscallManager, SyscallAllreadyRegisteredException
+from subsystems.syscall import SyscallManager
+from subsystems.common import SyscallReturn, SyscallReturnType
 from subsystems.tui import TextUserInterface
+from subsystems.gui import GUI
 from subsystems.procees_multi import ProcessManager, Process
 from subsystems.sheduler import Sheduler
 from subsystems.logging import Logger
 from subsystems.drivers import DriverManager
 from subsystems.dlls import DLLManager
 from subsystems.services import ServiceManager
+from subsystems.memory import MemoryManager
+from subsystems.GUI.MimirRender import MimirRender
+
 
 class KernelError(Enum):
     NoProcess = 0,
-    InirFailed = 1,
+    InitFailed = 1,
+
+
+class Resolutions(Enum):
+    R_360P  = (640,  360)
+    R_480P  = (854,  480)
+    R_720P  = (1280, 720)
+    R_1080P = (1920, 1080)
+    R_1440P = (2560, 1440)
+    R_4K    = (3840, 2160)
+    R_8K    = (7680, 4320)
+
+    def width(self)  -> int: return self.value[0]
+    def height(self) -> int: return self.value[1]
+
+    def to_tuple(self) -> tuple[int, int]: return self.value
+
+    def aspect_ratio(self) -> str:
+        w, h = self.value
+        from math import gcd
+        d = gcd(w, h)
+        return f"{w // d}:{h // d}"
+
+    def __str__(self) -> str:
+        return f"{self.value[0]}x{self.value[1]}"
+
+
+class Error:
+    def __init__(self, string):
+        self.time = time.time()
+        self.error = string
+
+
+def generate_error(exception_type: str, message: str, module: str = "kernel") -> Error:
+    timestamp = time.time()
+
+    fake_exception = f"[MOS/{module}] {exception_type}: {message} (at 0x{timestamp:.0f})"
+    return Error(fake_exception)
 
 
 class Kernel:
     def __init__(self, screen: Any):
-        try:
-            # Initialize the kernel and set up necessary components
+        self.crashdump_req = False
+        self.errors = []
+        self.is_shutdown = False
+        def init(screen: Any):
+
+            #Setting Up Unchangeable Variables
             self.screen = screen
-            self.multi_aktive = True
             self.logger = Logger()
+            
+            self.mode = "GUI"
 
-            self.system_data = {}
+            self.QaDBIO(0)
 
-            self.upper_os_get_data()
-            #self.print_system_data()
+            # Custom System Memory
+            self.memoryManager = MemoryManager()  # Initialize the memory manager
 
-            # Initialize the Subsystems
-            self.syscall_manager =      SyscallManager()
+            self.QaDBIO(1)
+
+            self.tui = TextUserInterface(screen, self.memoryManager)
+            self.gui = GUI(screen)
+
+            self.QaDBIO(2)
+
             self.process_manager =      ProcessManager()
             self.sheduler =             Sheduler(self.process_manager.get_process,self.process_manager.run)
-            self.tui =                  TextUserInterface(screen, self.sheduler)
+            self.tui.set_shedueler(self.sheduler)
+
+            self.QaDBIO(3)
+
             self.drivers_manager =      DriverManager()
+
+            self.QaDBIO(4)
+
             self.dll_manager =          DLLManager()
             self.service_manager =      ServiceManager()
 
+            self.syscall_manager =      SyscallManager(self.memoryManager)
 
-            # Seting up the Subsystems Variables
+            self.QaDBIO(5)
 
-            self.syscall = []
-        except Exception as e:
-            self.panic(KernelError.InirFailed)
-            print(f"Kernel initialization failed: {e}")
-        # Seting up the Subsystems
-        
-        self.drivers_manager.load("ntfs")
-        self.add_syscall_subroutines()
-        self.load_syscalls()
+            self.drivers_manager.load("ntfs")
 
-        # Start the init process
-        #self.tui.update()
-        self.logger.log(1,"Start-Up Finished")
-        self.load_init_process()
-        self.load_init_process(3)
-        #self.load_init_process(1)
-        while self.sheduler.runnable():
-            self.sheduler.loop()
-            #Run all Subroutines
+            self.QaDBIO(6)
+
+            self.tui.set_up_syscalls()
+            self.drivers_manager.call("ntfs","load_syscalls",self.memoryManager)
+
+            self.sheduler.register_syscalls(self.memoryManager)
+
+            self.add_syscall_subroutines()
+
+            self.syscall_manager.add_syscalls()
+
+            self.QaDBIO(7)
+
+            self.test_system()
             
+            self.QaDBIO(8)
+
+            self.logger.log(1,"Start-Up Finished")
+            self.load_init_process()
+            # for i in range(500):
+            #     self.load_init_process(i+10)
+            #     self.tui.update()
+            self.QaDBIO(100)
+
+            while self.sheduler.runnable():
+                self.sheduler.loop()
+                self.tui.update()
+                if self.mode == "GUI":
+                    self.gui.update()
+
+            self.shutdown()
+            #self.syscall_manager.handle_syscall(1,1024,())
+
+        try:
+            init(screen)  
+        except Exception as e:
+            self.crashdump_req = True
+            self.errors.append(Error(e))
+            print(e)
+            self.panic(KernelError.InitFailed)
+            return
+        
         self.panic(KernelError.NoProcess)
 
-        self.get_all_logs()
-        for log in self.logs.values():
-            print(log)
 
 
-        pygame.time.wait(5000)
-        #!ignore
-    
+    def QaDBIO(self, state:int):
+        """
+        Quick and Dirty Boot Information Output, give the user the Current State of the Kernel until the First Process is Executed.
+        The uses a Temporary MimirRenderer to Output the Information
+
+        Args:
+            state (int): The Current State of the Boot Process(Each Number is hardcoded to a specific State, see below)
+
+        State 0: Initializing the Memory Manager
+        State 1: Initializing the Graphics System
+        State 2: Initializing the Process Manager and the Sheduler
+        State 3: Initializing the Drivers Manager
+        State 4: Initializing the Syscall Manager
+
+        State 5: Loading all the Drivers
+        State 6: Loading all the Syscalls
+        State 7: Testing the System
+        State 8: Handing Graphics Control to the Graphics Subsystem and Starting the Init Process
+        """
+        if state == 0:
+            # Setting up the
+            self.tmp_mr = MimirRender(self.screen)
+            self.line = 0
+            self.line_height = 40
+        elif state == 100:
+            del self.tmp_mr
+            del self.line
+            del self.line_height
+            self.print_txt_QaDBIO = None
+            self.QaDBIO = None
+            del self.print_txt_QaDBIO
+            del self.QaDBIO
+            return
+        
+        match state:
+            case 0:
+                self.print_txt_QaDBIO("Initializing Memory Manager...")
+            case 1:
+                self.print_txt_QaDBIO("Initializing Graphics System...")
+            case 2:
+                self.print_txt_QaDBIO("Initializing Process Manager and Scheduler...")
+            case 3:
+                self.print_txt_QaDBIO("Initializing Drivers Manager...")
+            case 4:
+                self.print_txt_QaDBIO("Initializing Syscall Manager...")
+            case 5:
+                self.print_txt_QaDBIO("Loading Drivers...")
+            case 6:
+                self.print_txt_QaDBIO("Loading Syscalls...")
+            case 7:
+                self.print_txt_QaDBIO("Testing System...")
+            case 8:
+                self.print_txt_QaDBIO("Handing Graphics Control to the Graphics Subsystem and Starting the Init Process...")
+        
+        time.sleep(0.25)
+
+    def print_txt_QaDBIO(self,text):
+        self.tmp_mr.create_Text(0,self.line*self.line_height,text,24,(255,255,255)) 
+        self.line += 1
+        self.tmp_mr.render()
+        pygame.display.flip()
+
     def get_all_logs(self):
         self.logs = {}
 
@@ -94,173 +235,108 @@ class Kernel:
         self.create_process("Init Process: "+str(i), init_code)
     
     #Needs Export \/
-    def load_syscalls(self):
-        self.setup_syscalls()
-        # Load the syscalls into the syscall manager
-        try:
-            for syscall_id, function in enumerate(self.syscall):
-                self.syscall_manager.register_syscall(syscall_id + 0, function)  # Syscall IDs start from 1
-        except SyscallAllreadyRegisteredException as e:
-            print(f"Error loading syscalls: {e}")
-    def setup_syscalls(self):
-        
-        self.syscall_manager.add_file_syscalls(self.drivers_manager.drivers["ntfs"])
-        self.syscall_manager.add_tui_syscalls(self.tui)
-
-        def syscall_create_process(args):
-            file= args
-            if file != "":
-                return 1
-                fhid = self.syscall_manager.handle_syscall(1,file)
-                code = self.syscall_manager.handle_syscall(3,(fhid, -1))
-                process = self.create_process("IDK",str(code))
-                return process.pid
-
-        self.syscall.append(syscall_create_process)
     def create_process(self, name: str, code: str) -> Process:
         process = self.process_manager.create_process(name, code)
         process.setup_namespace(self.syscall_manager)  # Provide access to the syscall manager
         self.sheduler.register_programm(process,5)
         return process      
+    
     def add_syscall_subroutines(self):
         self.syscall_manager.add_syscall_subroutine(self.tui.update)
+        if self.mode == "GUI":
+            self.syscall_manager.add_syscall_subroutine(self.gui.update)
         #self.syscall_manager.add_syscall_subroutine(print)
         # This method can be expanded to include more complex syscall subroutines
         pass
 
-    # Kernel Methodes
+    # Kernel Methods
+
+    def test_system(self):
+        self.syscall_manager.handle_syscall(1,301,())
+
+        ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("test.test","w"))
+        self.syscall_manager.handle_syscall(1,4,(ret.value,"Dies ist ein Test."))
+        self.syscall_manager.handle_syscall(1,2,ret.value)
+
+        ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("test.test","r"))
+        file = self.syscall_manager.handle_syscall(1,3,(ret.value,18)).value
+        print("File:" + file)
+        self.syscall_manager.handle_syscall(1,2,ret.value)
+
+        self.syscall_manager.handle_syscall(1,302,())
+
+    def generate_dump(self):
+        latest_error = self.errors[-1].error if self.errors else "No errors recorded"
+        mem = self.memoryManager.memory
+        txt = ""
+        for cell in mem:
+            txt += cell.__str__()
+        dump = f"MOS-Kernel-Crashdump:\nMemory:\n{txt}\nLatest Error:\n{latest_error}"
+        with open("latest-error.crdmp", "w") as f:
+            f.write(dump)
+        pass
+
 
     def panic(self, error:KernelError):
-        self.tui.print_line("--------Kernel-Panic--------")
+        if self.is_shutdown:
+            self.wait(2)
+            return
+        self.tui.clear()
+        self.tui.set_bg((0,0,128))
+        self.tui.print_line(        "---------------Kernel-Panic---------------")
         match error:
             case KernelError.NoProcess:
                 self.tui.print_line("There are no Processes to run!")
-        self.tui.print_line("--------Kernel-Panic--------")
-    
+            case KernelError.InitFailed:
+                self.tui.print_line("The Initialization failed.")
+        self.tui.print_line(        "---------------Kernel-Panic---------------")
+        self.wait(2)
+        self.shutdown()
+        self.wait(2)
+
+           
     def shutdown(self):
+        self.is_shutdown = True
         pass
+        
+        syscall_logs = self.syscall_manager.shutdown()
+        tui_logs =     self.tui.shutdown()
+        sheduler_logs =self.sheduler.shutdown()
+        memory_logs =  self.memoryManager.shutdown()
 
-    def subroutines(self):
-        self.tui.update_waiting_queue()
-        self.sheduler.test_for_ruannable()
+        logs = self.logger.get_logs()
+        logs.update(syscall_logs.get_logs())
+        logs.update(tui_logs.get_logs())
+        logs.update(sheduler_logs.get_logs())
+        logs.update(memory_logs.get_logs())
 
-    def upper_os_get_data(self):
-        import psutil
-        import platform
-        cpu_freq = psutil.cpu_freq()
-        ram      = psutil.virtual_memory()
-        disk     = psutil.disk_usage('/')
-        net      = psutil.net_io_counters()
-        battery  = psutil.sensors_battery()
+        logs_txt = ""
 
-        self.system_data = {
-            "cpu": {
-                "percent":      psutil.cpu_percent(interval=0.1),
-                "cores_phys":   psutil.cpu_count(logical=False),
-                "cores_logic":  psutil.cpu_count(logical=True),
-                "freq_mhz":     round(cpu_freq.current, 1) if cpu_freq else None,
-                "freq_max_mhz": round(cpu_freq.max, 1)     if cpu_freq else None,
-            },
-            "ram": {
-                "total_mb":     round(ram.total     / 1024**2, 1),
-                "used_mb":      round(ram.used      / 1024**2, 1),
-                "available_mb": round(ram.available / 1024**2, 1),
-                "percent":      ram.percent,
-            },
-            "disk": {
-                "total_gb":  round(disk.total / 1024**3, 1),
-                "used_gb":   round(disk.used  / 1024**3, 1),
-                "free_gb":   round(disk.free  / 1024**3, 1),
-                "percent":   disk.percent,
-            },
-            "network": {
-                "bytes_sent_mb": round(net.bytes_sent / 1024**2, 2),
-                "bytes_recv_mb": round(net.bytes_recv / 1024**2, 2),
-                "packets_sent":  net.packets_sent,
-                "packets_recv":  net.packets_recv,
-            },
-            "battery": {
-                "percent":  battery.percent          if battery else None,
-                "plugged":  battery.power_plugged    if battery else None,
-                "secs_left": battery.secsleft        if battery else None,
-            },
-            "system": {
-                "os":       platform.system(),
-                "version":  platform.version(),
-                "machine":  platform.machine(),
-                "python":   platform.python_version(),
-                "hostname": platform.node(),
-            }
-        }
-    def print_system_data(self):
-        d = self.system_data
+        for timestamp, log in sorted(logs.items()):
+            #print(log)
+            logs_txt = logs_txt + str(log) + "\n"
+        
+        with open("logs.log","w") as f:
+            f.write(logs_txt)
+        
+        print("Shutdown Success")
 
-        def bar(percent, width=20):
-            filled = int(width * percent / 100)
-            return f"[{'█' * filled}{'░' * (width - filled)}] {percent:.1f}%"
+    def wait(self,adds):
+        start = time.time()
 
-        print("╔══════════════════════════════════════╗")
-        print("║          SYSTEM INFORMATION          ║")
-        print("╠══════════════════════════════════════╣")
+        add = start + adds
 
-        # System
-        s = d["system"]
-        print("║  🖥  SYSTEM                           ║")
-        print(f"║  OS       : {s['os']} {s['version'][:20]:<20} ║")
-        print(f"║  Hostname : {s['hostname']:<25} ║")
-        print(f"║  Machine  : {s['machine']:<25} ║")
-        print(f"║  Python   : {s['python']:<25} ║")
-        print("╠══════════════════════════════════════╣")
+        while time.time() <= add:
+            self.tui.update()
+            if self.mode == "GUI":
+                self.gui.update()
 
-        # CPU
-        c = d["cpu"]
-        print("║  ⚙  CPU                               ║")
-        print(f"║  Cores    : {c['cores_phys']} physical / {c['cores_logic']} logical{'':<8} ║")
-        print(f"║  Freq     : {c['freq_mhz']} MHz (max {c['freq_max_mhz']} MHz){'':<3} ║")
-        print(f"║  Load     : {bar(c['percent'])}  ║")
-        print("╠══════════════════════════════════════╣")
-
-        # RAM
-        r = d["ram"]
-        print("║  🧠 RAM                               ║")
-        print(f"║  {r['used_mb']:.0f} MB / {r['total_mb']:.0f} MB ({r['available_mb']:.0f} MB free){'':<4} ║")
-        print(f"║  Usage    : {bar(r['percent'])}  ║")
-        print("╠══════════════════════════════════════╣")
-
-        # Disk
-        dk = d["disk"]
-        print("║  💾 DISK                              ║")
-        print(f"║  {dk['used_gb']:.1f} GB / {dk['total_gb']:.1f} GB ({dk['free_gb']:.1f} GB free){'':<4} ║")
-        print(f"║  Usage    : {bar(dk['percent'])}  ║")
-        print("╠══════════════════════════════════════╣")
-
-        # Network
-        n = d["network"]
-        print("║  🌐 NETWORK                           ║")
-        print(f"║  Sent     : {n['bytes_sent_mb']:.2f} MB ({n['packets_sent']} packets){'':<4} ║")
-        print(f"║  Received : {n['bytes_recv_mb']:.2f} MB ({n['packets_recv']} packets){'':<4} ║")
-        print("╠══════════════════════════════════════╣")
-
-        # Battery
-        b = d["battery"]
-        print("║  🔋 BATTERY                           ║")
-        if b["percent"] is None:
-            print("║  No battery detected                  ║")
-        else:
-            status = "Plugged in" if b["plugged"] else "On battery"
-            secs   = b["secs_left"]
-            left   = f"{secs//3600}h {(secs%3600)//60}m" if secs and secs > 0 else "–"
-            print(f"║  Status   : {status:<25} ║")
-            print(f"║  Time left: {left:<25} ║")
-            print(f"║  Charge   : {bar(b['percent'])}  ║")
-
-        print("╚══════════════════════════════════════╝")
 
 if __name__ == "__main__":
     import pygame
 
     pygame.init()
-    screen = pygame.display.set_mode((3840, 2160),pygame.FULLSCREEN)
+    screen = pygame.display.set_mode(Resolutions.R_1080P.value,pygame.FULLSCREEN)
 
     kernel = Kernel(screen)
 

@@ -1,33 +1,32 @@
-from .logging import Logger
+from typing import Dict
 import pygame
+
+from .GUI.MimirRender import MimirRender
+from .logging import Logger
 from .sheduler import Sheduler
-
 from .common import SyscallReturn,SyscallReturnType
-
-class Line:
-    def __init__(self, text: str, color: tuple[int,int,int] = (255,255,255)):
-        self.text = text
-        self.color = color
-    
-    def render(self, font):
-        return font.render(self.text, True, self.color)
+from .memory import MemoryManager, Cell
 
 class TextUserInterface:
-    def __init__(self, screen, shedueler: Sheduler):
-        self.screen = screen
+    def __init__(self, screen,memory_mgr: MemoryManager, shedueler: Sheduler = None):
+        self.screen: pygame.Surface = screen
+        self.mr: MimirRender = MimirRender(screen)
+        self.mr.set_up_all_FPS()
         self.font = pygame.font.SysFont('Arial', 24)
         self.text_color = (255, 255, 255)  # White color
-        self.background_color = (0, 0, 0)    # Black color
+        self.mr.background_color = (0, 0, 0)    # Black color
 
         self.lock = 0
         self.waiting_queue = []
         self.shedueler : Sheduler = shedueler
 
+        self.gst_offset = 300
+        self.memory_mgr: MemoryManager = memory_mgr
 
-        self.height = screen.get_height() // self.font.render("ABC", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
-        self.width = screen.get_width() // (self.font.render("ABCDE", True, self.text_color).get_width()//5)   # Calculate how many characters can fit on a line
+        self.height = self.mr.get_height() // self.font.render("ABC", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
+        self.width = self.mr.get_width() // (self.font.render("ABCDE", True, self.text_color).get_width()//5)   # Calculate how many characters can fit on a line
 
-        self.lines = [""] * self.height  # Initialize empty lines
+        self.lines : list[str] = [""] * self.height  # Initialize empty lines
 
         self.lines[0] = "Welcome to the Text User Interface!"  # Initial message
         self.lines[1] = ">"  # Initial message
@@ -36,31 +35,49 @@ class TextUserInterface:
         self.input_aktive = False
         self.input_buffer = ""
 
+        self.need_update = True
+
         self.logger = Logger()
 
         self.logger.log(0,"TUI init successful.")
         self.logger.log(0,f"TUI DATA:\nHeight:{self.height}\nWidth:{self.width}\nInput?:{self.input_aktive}")      
 
+    def set_shedueler(self, shedueler: Sheduler):
+        self.shedueler = shedueler
+
     def draw_text(self, text, position):
-        text_surface = self.font.render(text, True, self.text_color)
-        text_rect = text_surface.get_rect(topleft=position)
-        pygame.draw.rect(self.screen, self.background_color, text_rect.inflate(10, 10))  # Background for better visibility
-        self.screen.blit(text_surface, text_rect)
+        self.mr.create_Text(position[0], position[1], text, 24, self.text_color)
 
     def print_line(self, text, line_number = None):
+        self.need_update = True
+        self.handle_max_line()
         if line_number is None:
             line_number = self.current_line
-            self.current_line += 1  # Move to the next line for the next input
         self.lines[line_number] = self.lines[line_number] + text  # Truncate text if it's too long
-
+        self.current_line += 1  # Move to the next line for the next input
         self.update()
 
+    def set_bg(self, color:pygame.color.Color):
+        self.mr.background_color = color
+    
+    def set_fg(self, color:pygame.color.Color):
+        self.text_color = color
+
+    def clear(self):
+        self.need_update = True
+        for idx in range(len(self.lines)):
+            self.lines[idx] = ""
+        self.current_line = 0
+
     def update(self):
-        # This method can be expanded to include more complex UI updates
-        for idx, line in enumerate(self.lines):
-            self.draw_text(line, (10, idx * self.font.get_height() + 10))
-        
+        if self.need_update or True:
+            self.mr.clear()
+            for idx, line in enumerate(self.lines):
+                self.draw_text(line, (10, idx * self.font.get_height() + 10))
+        self.mr.render()
+        self.mr.render_fps()
         pygame.display.flip()
+        self.need_update = False
     
     def handle_event(self):
         # Handle all Pygame events here (e.g., keyboard input)
@@ -72,11 +89,16 @@ class TextUserInterface:
                 continue
         self.update()
 
-
+    def handle_max_line(self):
+        while self.current_line >= self.height:
+            self.lines.pop(0)
+            self.lines.append("")
+            self.current_line -= 1
+            self.need_update = True
 
     # Syscalls
 
-    def require_tui(self, pid):
+    def require_tui(self, pid,args):
         if self.lock == 0:
             self.lock = pid
             return SyscallReturn(SyscallReturnType.Succes, 0)
@@ -85,7 +107,7 @@ class TextUserInterface:
             self.shedueler.block_process(pid)
             return SyscallReturn(SyscallReturnType.Wait,0)
 
-    def unlock_tui(self, pid):
+    def unlock_tui(self, pid,args):
         if self.lock == pid:
             self.lock = 0
             return SyscallReturn(SyscallReturnType.Succes, 0)
@@ -99,9 +121,28 @@ class TextUserInterface:
                 self.waiting_queue.remove(next_pid)
                 self.shedueler.unblock_process(next_pid)
                                                 
-
     def print(self,pid, text):
         if pid == self.lock:
             self.print_line(text)
             self.update()
             return SyscallReturn(SyscallReturnType.Succes, 1)
+
+    def set_up_syscalls(self):
+        pass
+        def write(self,syscall_id,func):
+            self.memory_mgr.write("syscall_mgr",self.memory_mgr.gst_ptr + syscall_id,func)
+        
+        write(self,301,self.require_tui)
+        write(self,302, self.unlock_tui)
+        write(self,304,self.print)
+    
+    def shutdown(self):
+        self.clear()
+        self.print_line("System-Shutting-down")
+        self.print_line("Please Wait")
+
+        self.update()
+
+        print(self.mr.get_last_FPS_stats())
+
+        return self.logger

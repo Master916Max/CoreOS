@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+.directory
+logs.log
+latest-error.crdmp
+.gitignore
+test.test

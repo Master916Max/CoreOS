@@ -1,6 +1,7 @@
 from types import FunctionType, MethodType
 from typing import Any
 from .logging import Logger
+from .memory import MemoryManager
 
 class NoneRegisteredSyscallException(Exception):
     pass
@@ -20,10 +21,11 @@ class Syscall:
         return self.function(pid,args)
 
 class SyscallManager:
-    def __init__(self):
+    def __init__(self, memory_mgr : MemoryManager):
         self.syscalls: dict[int, Syscall] = {}
         self.logger = Logger()
         self.subroutines = []
+        self.memory_mgr: MemoryManager = memory_mgr
 
     def register_syscall(self, syscall_id: int, function: FunctionType):
         if syscall_id in self.syscalls:
@@ -45,59 +47,18 @@ class SyscallManager:
         # This method can be expanded to include more complex syscall subroutines
         self.subroutines.append(function)
         pass
+    
+    def add_syscalls(self):
+        for i in range(1024):
+            cont = self.memory_mgr.read("syscall_mgr",self.memory_mgr.gst_ptr + i)
+            if cont:
+                self.syscalls[i] = Syscall(i,cont)
+                print(i)
+    
+    def shutdown(self):
+        self.syscalls = {}
+        self.subroutines = []
+        self.logger.log(0,"[Shutdown]--Syscall-Mgr Shutdown succes")
 
-    def add_file_syscalls(self, driver):
-        #Open
-        def l_open(pid, args):
-            path = args[0]
-            mode = args[1]
-            return driver.run("open", path,mode)
-        #Close
-        def close(pid,args):
-            FH = args[0]
-            return driver.run("close", FH)
-        #Read
-        def read(pid,args):
-            FH = args[0]
-            size = args[1]
-            return driver.run("read", FH,size)
-        #Write
-        def write(pid,args):
-            FH = args[0]
-            data = args[1]
-            return driver.run("write", FH, data)
-        #Seek
-        def seek(pid,args):
-            FH = args[0]
-            offset = args[1]
-            whence = args[2]
-            return driver.run("seek", FH, offset, whence)
-        #tell
-        def tell(pid,args):
-            FH = args[0]
-            return driver.run("tell", FH)
-        open_sys = Syscall(1,l_open)
-        close_sys = Syscall(2,close)
-        read_sys = Syscall(3, read)
-        write_sys = Syscall(4, write)
-        seek_sys = Syscall(5,seek)
-        tell_sys = Syscall(6, tell)
+        return self.logger
 
-        self.syscalls[1] = open_sys
-        self.syscalls[2] = close_sys
-        self.syscalls[3] = read_sys
-        self.syscalls[4] = write_sys
-        self.syscalls[5] = seek_sys
-        self.syscalls[6] = tell_sys
-
-    def add_tui_syscalls(self, tui):
-        def require_tui(pid,args):
-            return tui.require_tui(pid)
-        def unlock_tui(pid,args):
-            return tui.unlock_tui(pid)
-        def printl(pid,args):
-            text = args
-            return tui.print(pid, text)
-        self.syscalls[301] = Syscall(301,require_tui)
-        self.syscalls[302] = Syscall(302,unlock_tui)
-        self.syscalls[304] = Syscall(304,printl)

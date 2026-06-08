@@ -1,10 +1,15 @@
+#Type=console
+#SystemDLL=system
 
-from systems import *
+def load_library(name): 
+    syscall(401,name)
+    return ret
 
-std = load_libary("std")
+hnd = load_library(system.dll)
 
-std.register()
+def load_function(hnd,idx):
+    return read_mem(hnd+1+idx)
 
-std.print("Hello World")
+shutdown = load_function(hnd,1017)
 
-std.unregister()
+shutdown()
