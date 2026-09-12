@@ -1,3 +1,4 @@
+from ast import excepthandler
 from time import time
 import time
 from enum import Enum
@@ -16,13 +17,13 @@ from subsystems.dlls import DLLManager
 from subsystems.services import ServiceManager
 from subsystems.memory import MemoryManager
 from subsystems.GUI.MimirRender import MimirRender
-from subsystems.debug import Debuger
+from subsystems.debug import Debugger
 
 
 class KernelError(Enum):
     NoProcess = 0,
     InitFailed = 1,
-
+    NoInitProcess=2,
 
 class Resolutions(Enum):
     R_360P  = (640,  360)
@@ -47,6 +48,9 @@ class Resolutions(Enum):
     def __str__(self) -> str:
         return f"{self.value[0]}x{self.value[1]}"
 
+class KernelException(Exception):
+    type : KernelError
+    module: str
 
 class Error:
     def __init__(self, string):
@@ -67,18 +71,32 @@ class Kernel:
         self.errors = []
         self.is_shutdown = False
         self.debug_mode = debug_mode
+        self.screen: pygame.Surface
+        self.gui: GUI | None
+        self.tui: TextUserInterface | None
+        self.logger: Logger
+        self.mode : str
+        self.debuger: Debugger | None
+        self.memoryManager: MemoryManager
+        self.process_manager: ProcessManager
+        self.sheduler: Sheduler
+        self.drivers_manager: DriverManager
+        self.dll_manager: DLLManager
+        self.service_manager: ServiceManager
+        self.syscall_manager: SyscallManager
+
         def init(screen: Any):
 
             #Setting Up Unchangeable Variables
             self.screen = screen
             self.logger = Logger()
             
-            self.mode = "GUI"
+            self.mode = "TUI"
 
             self.QaDBIO(0)
 
             if self.debug_mode:
-                self.debuger = Debuger(self)
+                self.debuger = Debugger(self)
 
 
             # Custom System Memory
@@ -93,8 +111,6 @@ class Kernel:
                 self.tui = None
                 self.gui = GUI(screen)
             
-            
-
             self.QaDBIO(2)
 
             self.process_manager =      ProcessManager()
@@ -156,6 +172,11 @@ class Kernel:
 
         try:
             init(screen)  
+        except KernelException as ke:
+            
+            if ke.type == KernelError.NoInitProcess:
+                self.errors.append(generate_error("No-Init-Process","No Init Programm found","Kernel-Boot"))
+                self.panic(KernelError.NoInitProcess)
         except Exception as e:
             self.crashdump_req = True
             self.errors.append(Error(e))
@@ -167,7 +188,7 @@ class Kernel:
 
 
 
-    def QaDBIO(self, state:int):
+    def QaDBIO(self, state:int) -> None:
         """
         Quick and Dirty Boot Information Output, give the user the Current State of the Kernel until the First Process is Executed.
         The uses a Temporary MimirRenderer to Output the Information
@@ -194,10 +215,8 @@ class Kernel:
             del self.tmp_mr
             del self.line
             del self.line_height
-            self.print_txt_QaDBIO = None
-            self.QaDBIO = None
-            del self.print_txt_QaDBIO
-            del self.QaDBIO
+            #del self.print_txt_QaDBIO
+            #del self.QaDBIO
             return
         
         match state:
@@ -222,13 +241,13 @@ class Kernel:
         
         time.sleep(0.1)
 
-    def print_txt_QaDBIO(self,text):
+    def print_txt_QaDBIO(self,text) -> None:
         self.tmp_mr.create_Text(0,self.line*self.line_height,text,24,(255,255,255)) 
         self.line += 1
         self.tmp_mr.render()
         pygame.display.flip()
 
-    def get_all_logs(self):
+    def get_all_logs(self) -> None:
         self.logs = {}
 
         syscalls_logs = self.syscall_manager.logger.get_logs()
@@ -244,16 +263,23 @@ class Kernel:
         self.logs.update(process_logs)
         self.logs.update(sheduel_logs)
         if self.tui:
-            self.logs.update(tui_logs)
+            self.logs.update(tui_logs) # pyright: ignore[reportPossiblyUnboundVariable]
         
         # Sort dictionary by keys and return values
         self.logs = dict(sorted(self.logs.items()))
     
     def load_init_process(self, i = 0):
         init_code = ""
-        with open("Initial/init.py", "r") as f:
-            init_code = f.read()
-        self.create_process("Init Process: "+str(i), init_code)
+        try:
+            with open("Initial/init.py", "r") as f:
+                init_code = f.read()
+            self.create_process("Init Process: "+str(i), init_code)
+        except FileNotFoundError:
+            ek = KernelException()
+            ek.type = KernelError.NoInitProcess
+            ek.module = "MAIN"
+            self.errors.append(generate_error("File Not Found","No Init Programm found","Kernel/BOOT/INIT_LOADER"))
+            raise ek
     
     #Needs Export \/
     def create_process(self, name: str, code: str) -> Process:
@@ -292,7 +318,10 @@ class Kernel:
         txt = ""
         for cell in mem:
             txt += cell.__str__()
-        dump = f"MOS-Kernel-Crashdump:\nLatest Error:\n{latest_error}\nMemory:\n{txt}"
+        errors = ""
+        for error in self.errors:
+            errors += error.error + "\n"
+        dump = f"MOS-Kernel-Crashdump:\nLatest Error:\n{latest_error}\n Errors:{errors}\nMemory:\n{txt}"
         with open("latest-error.crdmp", "w") as f:
             f.write(dump)
         pass
@@ -305,9 +334,11 @@ class Kernel:
         if not self.tui:
             self.tui = TextUserInterface(self.screen, self.memoryManager)
         self.tui.clear()
-        self.tui.set_bg((0,0,128))
+        self.tui.set_bg((0,0,128)) # pyright: ignore[reportArgumentType]
         self.tui.print_line(        "---------------Kernel-Panic---------------")
         match error:
+            case KernelError.NoInitProcess:
+                self.tui.print_line("There is no valid INIT Programm!")
             case KernelError.NoProcess:
                 self.tui.print_line("There are no Processes to run!")
             case KernelError.InitFailed:
@@ -333,9 +364,9 @@ class Kernel:
         logs = self.logger.get_logs()
         logs.update(syscall_logs.get_logs())
         if self.tui:
-            logs.update(tui_logs.get_logs())
+            logs.update(tui_logs.get_logs()) # pyright: ignore[reportPossiblyUnboundVariable]
         if self.gui:
-            logs.update(gui_logs.get_logs())
+            logs.update(gui_logs.get_logs()) # pyright: ignore[reportPossiblyUnboundVariable]
         logs.update(sheduler_logs.get_logs())
         logs.update(memory_logs.get_logs())
 
@@ -368,6 +399,6 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode(Resolutions.R_1080P.value,pygame.FULLSCREEN)
 
-    kernel = Kernel(screen, debug_mode=True)
+    kernel = Kernel(screen, debug_mode=False)
 
     pygame.quit()
