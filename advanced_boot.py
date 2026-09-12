@@ -38,7 +38,7 @@ try:
     sel = menu(["Fullscreen","Window"])
 except Exception as e:
     print(e)
-    print("Select Lowest Resolution as Default")
+    print("Select Window as Default")
     sel = 1
 
 fullscreen = True
@@ -48,11 +48,25 @@ match sel:
         fullscreen = True
     case 1:
         fullscreen = False
-    
+
+try:
+    sel = menu(["Debug_Mode","Normal_Mode"])
+except Exception as e:
+    print(e)
+    print("Select Normal_Mode as Default")
+    sel = 1
+
+debug = True
+
+match sel:
+    case 0:
+        debug = True
+    case 1:
+        debug = False
 
 pygame.init()
 screen = pygame.display.set_mode(resolution,pygame.FULLSCREEN if fullscreen else 0)
 
-live_kernel = kernel.Kernel(screen)
+live_kernel = kernel.Kernel(screen, debug_mode=debug)
 
 pygame.quit()

@@ -2,6 +2,12 @@ import pygame
 
 from .GUI.MimirRender import MimirRender
 from .GUI.desktop import Desktop
+from .GUI._layer_s import Layer, LayerManager
+
+from .logging import Logger
+from .sheduler import Sheduler
+from .common import SyscallReturn,SyscallReturnType
+from .memory import MemoryManager, Cell
 
 class Window:
     def __init__(self, title, owner, size:tuple):
@@ -28,13 +34,30 @@ class WindowManager:
 class GUI:
     def __init__(self, screen):
         self.screen = screen
-        self.window_manager = WindowManager()
-        self.desktop = Desktop(screen)
 
-    def update(self):
-        self.desktop.render()
-        pygame.display.flip()
-        pass
+        self.layer_mgr = LayerManager(self.screen)
+
+        self.dektop_surface = pygame.Surface(screen.get_size())
+        self.layer_mgr.add_layer(Layer(0,self.dektop_surface))
+
+        self.window_manager = WindowManager()
+        self.desktop = Desktop(self.dektop_surface)
+
+
+        self.shedueler : Sheduler
+        self.gst_offset = 400
+        self.memory_mgr: MemoryManager
+
+        self.height = self.screen.get_height()
+        self.width = self.screen.get_width()
+
+        
+        
+        self.need_update = True
+
+        self.logger = Logger()
+        self.logger.log(0,"GUI init successful.")
+        self.logger.log(0,f"GUI DATA:\nHeight:{self.height}\nWidth:{self.width}")    
 
     def draw(self):
         pass
@@ -47,3 +70,35 @@ class GUI:
 
     def log(self, message):
         pass
+
+    def set_shedueler(self, shedueler: Sheduler):
+            self.shedueler = shedueler
+
+    def update(self):
+        if self.need_update:
+            pass
+        self.desktop.render()
+
+        self.layer_mgr.render()
+        pygame.display.flip()
+        self.need_update = False
+    
+    def handle_event(self):
+        # Handle all Pygame events here (e.g., keyboard input)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            else:
+                continue
+        self.update()
+
+    # Syscalls
+
+    def set_up_syscalls(self):
+        pass
+    
+    def shutdown(self):
+        self.update()
+        print(self.desktop.get_stats())
+        return self.logger

@@ -22,6 +22,8 @@ class NTFS(Driver):
 
         self.file_modes = ["r","w","a","rb","wb"]
 
+        #raise NotImplementedError("NTFS Driver is not implemented yet.")
+
     def open(self,pid,args):
         path,mode = args
         if mode in self.file_modes:

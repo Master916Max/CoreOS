@@ -16,6 +16,7 @@ from subsystems.dlls import DLLManager
 from subsystems.services import ServiceManager
 from subsystems.memory import MemoryManager
 from subsystems.GUI.MimirRender import MimirRender
+from subsystems.debug import Debuger
 
 
 class KernelError(Enum):
@@ -61,10 +62,11 @@ def generate_error(exception_type: str, message: str, module: str = "kernel") ->
 
 
 class Kernel:
-    def __init__(self, screen: Any):
+    def __init__(self, screen: Any, debug_mode: bool = False):
         self.crashdump_req = False
         self.errors = []
         self.is_shutdown = False
+        self.debug_mode = debug_mode
         def init(screen: Any):
 
             #Setting Up Unchangeable Variables
@@ -75,19 +77,32 @@ class Kernel:
 
             self.QaDBIO(0)
 
+            if self.debug_mode:
+                self.debuger = Debuger(self)
+
+
             # Custom System Memory
             self.memoryManager = MemoryManager()  # Initialize the memory manager
 
             self.QaDBIO(1)
 
-            self.tui = TextUserInterface(screen, self.memoryManager)
-            self.gui = GUI(screen)
+            if self.mode == "TUI":
+                self.tui = TextUserInterface(screen, self.memoryManager)
+                self.gui = None
+            elif self.mode == "GUI":
+                self.tui = None
+                self.gui = GUI(screen)
+            
+            
 
             self.QaDBIO(2)
 
             self.process_manager =      ProcessManager()
             self.sheduler =             Sheduler(self.process_manager.get_process,self.process_manager.run)
-            self.tui.set_shedueler(self.sheduler)
+            if self.tui:
+                self.tui.set_shedueler(self.sheduler)
+            if self.gui:
+                self.gui.set_shedueler(self.sheduler)
 
             self.QaDBIO(3)
 
@@ -106,7 +121,8 @@ class Kernel:
 
             self.QaDBIO(6)
 
-            self.tui.set_up_syscalls()
+            if self.tui:
+                self.tui.set_up_syscalls()
             self.drivers_manager.call("ntfs","load_syscalls",self.memoryManager)
 
             self.sheduler.register_syscalls(self.memoryManager)
@@ -130,8 +146,9 @@ class Kernel:
 
             while self.sheduler.runnable():
                 self.sheduler.loop()
-                self.tui.update()
-                if self.mode == "GUI":
+                if self.tui:
+                    self.tui.update()
+                if self.gui:
                     self.gui.update()
 
             self.shutdown()
@@ -158,15 +175,14 @@ class Kernel:
         Args:
             state (int): The Current State of the Boot Process(Each Number is hardcoded to a specific State, see below)
 
-        State 0: Initializing the Memory Manager
-        State 1: Initializing the Graphics System
-        State 2: Initializing the Process Manager and the Sheduler
-        State 3: Initializing the Drivers Manager
-        State 4: Initializing the Syscall Manager
-
-        State 5: Loading all the Drivers
-        State 6: Loading all the Syscalls
-        State 7: Testing the System
+        State 0: Initializing the Memory Manager\n
+        State 1: Initializing the Graphics System\n
+        State 2: Initializing the Process Manager and the Sheduler\n
+        State 3: Initializing the Drivers Manager\n
+        State 4: Initializing the Syscall Manager\n
+        State 5: Loading all the Drivers\n
+        State 6: Loading all the Syscalls\n
+        State 7: Testing the System\n
         State 8: Handing Graphics Control to the Graphics Subsystem and Starting the Init Process
         """
         if state == 0:
@@ -204,7 +220,7 @@ class Kernel:
             case 8:
                 self.print_txt_QaDBIO("Handing Graphics Control to the Graphics Subsystem and Starting the Init Process...")
         
-        time.sleep(0.25)
+        time.sleep(0.1)
 
     def print_txt_QaDBIO(self,text):
         self.tmp_mr.create_Text(0,self.line*self.line_height,text,24,(255,255,255)) 
@@ -218,12 +234,17 @@ class Kernel:
         syscalls_logs = self.syscall_manager.logger.get_logs()
         process_logs  = self.process_manager.logger.get_logs()
         sheduel_logs  = self.sheduler.logger.get_logs()
-        tui_logs      = self.tui.logger.get_logs()
+        if self.tui:
+            tui_logs      = self.tui.logger.get_logs()
+        if self.gui:
+            gui_logs      = self.gui.logger.get_logs()
+            self.logs.update(gui_logs)
 
         self.logs.update(syscalls_logs)
         self.logs.update(process_logs)
         self.logs.update(sheduel_logs)
-        self.logs.update(tui_logs)
+        if self.tui:
+            self.logs.update(tui_logs)
         
         # Sort dictionary by keys and return values
         self.logs = dict(sorted(self.logs.items()))
@@ -239,20 +260,20 @@ class Kernel:
         process = self.process_manager.create_process(name, code)
         process.setup_namespace(self.syscall_manager)  # Provide access to the syscall manager
         self.sheduler.register_programm(process,5)
-        return process      
+        return process
     
     def add_syscall_subroutines(self):
-        self.syscall_manager.add_syscall_subroutine(self.tui.update)
-        if self.mode == "GUI":
+        if self.tui:
+            self.syscall_manager.add_syscall_subroutine(self.tui.update)
+        if self.gui:
             self.syscall_manager.add_syscall_subroutine(self.gui.update)
-        #self.syscall_manager.add_syscall_subroutine(print)
-        # This method can be expanded to include more complex syscall subroutines
         pass
 
     # Kernel Methods
 
     def test_system(self):
-        self.syscall_manager.handle_syscall(1,301,())
+        if self.tui:
+            self.syscall_manager.handle_syscall(1,301,())
 
         ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("test.test","w"))
         self.syscall_manager.handle_syscall(1,4,(ret.value,"Dies ist ein Test."))
@@ -260,10 +281,10 @@ class Kernel:
 
         ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("test.test","r"))
         file = self.syscall_manager.handle_syscall(1,3,(ret.value,18)).value
-        print("File:" + file)
         self.syscall_manager.handle_syscall(1,2,ret.value)
 
-        self.syscall_manager.handle_syscall(1,302,())
+        if self.tui:
+            self.syscall_manager.handle_syscall(1,302,())
 
     def generate_dump(self):
         latest_error = self.errors[-1].error if self.errors else "No errors recorded"
@@ -271,7 +292,7 @@ class Kernel:
         txt = ""
         for cell in mem:
             txt += cell.__str__()
-        dump = f"MOS-Kernel-Crashdump:\nMemory:\n{txt}\nLatest Error:\n{latest_error}"
+        dump = f"MOS-Kernel-Crashdump:\nLatest Error:\n{latest_error}\nMemory:\n{txt}"
         with open("latest-error.crdmp", "w") as f:
             f.write(dump)
         pass
@@ -279,8 +300,10 @@ class Kernel:
 
     def panic(self, error:KernelError):
         if self.is_shutdown:
-            self.wait(2)
+            self.wait(1)
             return
+        if not self.tui:
+            self.tui = TextUserInterface(self.screen, self.memoryManager)
         self.tui.clear()
         self.tui.set_bg((0,0,128))
         self.tui.print_line(        "---------------Kernel-Panic---------------")
@@ -290,6 +313,7 @@ class Kernel:
             case KernelError.InitFailed:
                 self.tui.print_line("The Initialization failed.")
         self.tui.print_line(        "---------------Kernel-Panic---------------")
+        self.generate_dump()
         self.wait(2)
         self.shutdown()
         self.wait(2)
@@ -297,16 +321,21 @@ class Kernel:
            
     def shutdown(self):
         self.is_shutdown = True
-        pass
         
         syscall_logs = self.syscall_manager.shutdown()
-        tui_logs =     self.tui.shutdown()
+        if self.tui:
+            tui_logs =     self.tui.shutdown()
+        if self.gui:
+                   gui_logs =     self.gui.shutdown()
         sheduler_logs =self.sheduler.shutdown()
         memory_logs =  self.memoryManager.shutdown()
 
         logs = self.logger.get_logs()
         logs.update(syscall_logs.get_logs())
-        logs.update(tui_logs.get_logs())
+        if self.tui:
+            logs.update(tui_logs.get_logs())
+        if self.gui:
+            logs.update(gui_logs.get_logs())
         logs.update(sheduler_logs.get_logs())
         logs.update(memory_logs.get_logs())
 
@@ -327,8 +356,9 @@ class Kernel:
         add = start + adds
 
         while time.time() <= add:
-            self.tui.update()
-            if self.mode == "GUI":
+            if self.tui:
+                self.tui.update()
+            if self.gui:
                 self.gui.update()
 
 
@@ -338,6 +368,6 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode(Resolutions.R_1080P.value,pygame.FULLSCREEN)
 
-    kernel = Kernel(screen)
+    kernel = Kernel(screen, debug_mode=True)
 
     pygame.quit()

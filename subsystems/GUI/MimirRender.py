@@ -110,6 +110,28 @@ class MimirRender:
             surface = self.fps_font.render(line, True, (255, 255, 255))
             self.screen.blit(surface, (self.get_width() - surface.get_width(), i * line_height))
 
+    def calc_fps(self):
+            current = self.clock.get_fps()
+    
+            if self.track_max:
+                self.max_fps = max(self.max_fps, current)
+            if self.track_min and current > 0:  
+                self.min_fps = min(self.min_fps, current)
+            if self.track_avg:
+                self.all_fps.append(current)
+    
+    
+            lines = [f"FPS: {int(current)}"]
+            if self.track_max:
+                lines.append(f"MAX: {int(self.max_fps)}")
+            if self.track_min:
+                if self.track_min and self.min_fps != float("inf"):
+                    lines.append(f"MIN: {int(self.min_fps)}")
+                elif self.track_min:
+                    lines.append("MIN: --")
+            if self.track_avg and self.all_fps:
+                lines.append(f"AVG: {int(sum(self.all_fps) / len(self.all_fps))}")
+
     # --- API ---
 
     def update_obj(self, z: int, **kwargs) -> bool:
