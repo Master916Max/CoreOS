@@ -13,3 +13,4 @@ logs.log
 latest-error.crdmp
 .gitignore
 test.test
+generate/last_ks.bin
