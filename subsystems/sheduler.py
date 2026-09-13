@@ -97,6 +97,7 @@ class Sheduler:
             self.waiting_queue.remove(pid)
         if pid not in self.ready_queue:
             self.ready_queue.append(pid)
+        self.get_process(pid).state = "ready"
         
     def remove_pid(self,rpid):
         for pid in self.ready_queue:

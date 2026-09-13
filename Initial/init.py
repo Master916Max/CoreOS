@@ -9,12 +9,10 @@ def unlock_tui():syscall(302) # pyright: ignore[reportUndefinedVariable]
 def printl(text):syscall(304,text) # pyright: ignore[reportUndefinedVariable]
 
 def read_c() -> str:
-    syscall(321) # pyright: ignore[reportUndefinedVariable]
-    return ret # pyright: ignore[reportUndefinedVariable]
+    return syscall(321) # pyright: ignore[reportUndefinedVariable]
 
 def read_l() -> str:
-    syscall(322) # pyright: ignore[reportUndefinedVariable]
-    return ret # pyright: ignore[reportUndefinedVariable]
+    return syscall(322) # pyright: ignore[reportUndefinedVariable]
 
 def sleep(ms): syscall(909, ms) # pyright: ignore[reportUndefinedVariable]
 
@@ -40,8 +38,8 @@ require_tui()
 printl(f"Test Hello")
 unlock_tui()
 
+require_tui()
 while True:
-    require_tui()
     line = read_l()
     if line == "sh" or line == "shutdown":
         break
@@ -50,3 +48,5 @@ while True:
 
 
 unlock_tui()
+syscall(400)
+#4i  82ujkJHKGFGJHGJHGJHG

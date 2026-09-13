@@ -14,6 +14,7 @@ class Process:
         self._mgr_gl     = manager_greenlet
         self._gl         = greenlet()
         self._started    = False
+        self.ui_input    = ""
 
     def load_code(self, code: str):
         self.code = code
@@ -31,8 +32,10 @@ class Process:
                     ret = ret.value
                 elif ret.type == SyscallReturnType.Wait:
                     self.state = "waiting"
-                    print(ret)
                     self._mgr_gl.switch()
+                    if ret.value == 321: 
+                        print("Return: ",self.ui_input)
+                        return self.ui_input
                 elif ret.type == SyscallReturnType.Error:
                     print(f"Error in syscall {syscall_id} with args {args}: {ret.value}")
                     return None
@@ -75,14 +78,14 @@ class ProcessManager:
             del self.processes[pid]
 
     def run(self, pid: int):
-        process: Process | None = self.processes.get(pid)
-        if process is None or process.state == "terminated":
+        process_: Process | None = self.processes.get(pid)
+        if process_ is None or process_.state == "terminated":
             return
-        if isinstance(process, Process):
-            process: Process = process
+        if isinstance(process_, Process):
+            process: Process = process_
             process.state = "running"
             process._gl.switch()
         
-        if process.state == "terminated":
+        if process_.state == "terminated":
             self.terminate_process(pid)
             return "finished"

@@ -93,11 +93,13 @@ class TextUserInterface:
                     elif event.key == pygame.K_RETURN:
                         self.input_aktive = False
                         if self.input_mode == "line":
+                            self.shedueler.get_process(self.lock).ui_input = self.input_buffer # pyright: ignore[reportOptionalMemberAccess]
                             self.shedueler.unblock_process(self.lock) # pyright: ignore[reportOptionalMemberAccess]
                     else:
                         self.input_buffer += event.unicode
-                    print(self.input_buffer)
                     if self.input_mode == "char":
+                        print(self.input_buffer)
+                        self.shedueler.get_process(self.lock).ui_input = self.input_buffer # pyright: ignore[reportOptionalMemberAccess]
                         self.shedueler.unblock_process(self.lock) # pyright: ignore[reportOptionalMemberAccess]
 
             else:
@@ -149,7 +151,7 @@ class TextUserInterface:
             self.input_mode = "char"
             self.input_buffer = ""
             self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
-            return SyscallReturn(SyscallReturnType.Wait, self.input_buffer)
+            return SyscallReturn(SyscallReturnType.Wait, 321)
 
     def read_line(self,pid, _):
         if pid == self.lock:
@@ -158,7 +160,7 @@ class TextUserInterface:
             self.input_mode = "line"
             self.input_buffer = ""
             self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
-            return SyscallReturn(SyscallReturnType.Wait, self.input_buffer)
+            return SyscallReturn(SyscallReturnType.Wait, 321)
 
     def set_up_syscalls(self):
         pass
@@ -173,6 +175,7 @@ class TextUserInterface:
     
     def shutdown(self):
         self.clear()
+        self.set_bg(self.mr.get_color(0,0,32))
         self.print_line("System-Shutting-down")
         self.print_line("Please Wait")
 

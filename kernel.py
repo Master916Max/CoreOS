@@ -288,7 +288,7 @@ class Kernel:
                 if self.gui:
                     self.gui.handle_event()
 
-            self.shutdown()
+            #self.shutdown()
             #self.syscall_manager.handle_syscall(1,1024,())
         
         self.state.last_state   = load_last_ks()
@@ -324,6 +324,8 @@ class Kernel:
             self.panic(KernelError.InitFailed)
             return
         finally:
+            self.errors.append(generate_error("KernelException","Happend dnw when","Kernel/RUN_TIME"))
+            self.crashdump_req = True
             self.panic(KernelError.NoProcess)
 
     def handle_rsod(self, kernel_mode: KernelMode) -> None:
@@ -383,6 +385,7 @@ class Kernel:
         if self.gui:
             self.syscall_manager.add_syscall_subroutine(self.gui.handle_event)
         pass
+        self.memoryManager.write("syscall_mgr",self.memoryManager.gst_ptr + 400,self.shutdown)
 
     # Kernel Methods
 
@@ -417,7 +420,7 @@ class Kernel:
 
     def panic(self, error:KernelError):
         if self.is_shutdown:
-            self.wait(0)
+            self.wait(2)
             self.state.bsod_counter = 0
             save_ks(self.state)
             return
@@ -441,11 +444,12 @@ class Kernel:
         self.tui.print_line(        "---------------Kernel-Panic---------------")
         self.generate_dump()
         self.wait(.5)
-        self.shutdown()
+        self.shutdown(1,0)
         self.wait(2)
         save_ks(self.state)
 
-    def shutdown(self):
+    def shutdown(self, pid, _):
+        if pid != 1: return SyscallReturn(SyscallReturnType.Error, 102)
         self.is_shutdown = True
         
         syscall_logs = self.syscall_manager.shutdown()
