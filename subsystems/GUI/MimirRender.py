@@ -13,17 +13,17 @@ class RenderObj:
     color: tuple = (255, 255, 255)
     text: str = ""
     font_size: int = 24
-    pos1: tuple = None
-    pos2: tuple = None
-    pos3: tuple = None
+    pos1: tuple = None # pyright: ignore[reportAssignmentType]
+    pos2: tuple = None # pyright: ignore[reportAssignmentType]
+    pos3: tuple = None # pyright: ignore[reportAssignmentType]
 
 
 class MimirRender:
-    def __init__(self, screen):
-        self.screen = screen
+    def __init__(self, screen: pygame.Surface):
+        self.screen: pygame.Surface = screen
         self.objs: dict[int, RenderObj] = {}
         self.next_z = 0
-        self.background_color = (0,5, 0)
+        self.background_color = self.get_color(0,5,0)
 
         self._sorted_keys: list[int] = []
         self._dirty = False
@@ -92,6 +92,9 @@ class MimirRender:
             self.min_fps = min(self.min_fps, current)
         if self.track_avg:
             self.all_fps.append(current)
+            if len(self.all_fps) > 2000:
+                self.all_fps.pop(0)
+
 
 
         lines = [f"FPS: {int(current)}"]
@@ -154,6 +157,9 @@ class MimirRender:
 
     def get_obj(self, z: int) -> RenderObj | None:
         return self.objs.get(z, None)
+
+    def get_color(self, r,g,b) -> pygame.Color:
+        return pygame.Color((r,g,b))
 
     # --- Create ---
 

@@ -55,7 +55,7 @@ screen = pygame.display.set_mode((3840, 2160),pygame.FULLSCREEN)
 center = (screen.get_width()//2,screen.get_height()//2)
 
 mr = MimirRender(screen)
-mr.background_color = WIN9X_COLORS["desktop"]
+mr.background_color = WIN9X_COLORS["desktop"] # pyright: ignore[reportAttributeAccessIssue]
 
 class Window:
     def __init__(self, size, pos):

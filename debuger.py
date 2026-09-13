@@ -16,12 +16,9 @@ try:
     while True:
         message = input(f"Debug-{path}> ")
 
-        if message.lower() == "exit":
-            break
+        if message.lower() == "exit":break
 
-        client.sendall(
-            message.encode("utf-8")
-        )
+        client.sendall(message.encode("utf-8"))
 
         data = client.recv(4096)
 

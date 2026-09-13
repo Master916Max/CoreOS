@@ -31,6 +31,7 @@ class Process:
                     ret = ret.value
                 elif ret.type == SyscallReturnType.Wait:
                     self.state = "waiting"
+                    print(ret)
                     self._mgr_gl.switch()
                 elif ret.type == SyscallReturnType.Error:
                     print(f"Error in syscall {syscall_id} with args {args}: {ret.value}")

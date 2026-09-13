@@ -53,12 +53,12 @@ class SyscallManager:
             cont = self.memory_mgr.read("syscall_mgr",self.memory_mgr.gst_ptr + i)
             if cont:
                 self.syscalls[i] = Syscall(i,cont)
-                print(i)
+                self.logger.log(0,str(i))
     
-    def shutdown(self):
+    def shutdown(self) -> Logger:
         self.syscalls = {}
         self.subroutines = []
-        self.logger.log(0,"[Shutdown]--Syscall-Mgr Shutdown succes")
+        self.logger.log(1,"[Shutdown]--Syscall-Mgr Shutdown success")
 
         return self.logger
 

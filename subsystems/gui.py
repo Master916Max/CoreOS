@@ -65,9 +65,6 @@ class GUI:
     def handle_input(self, input):
         pass
 
-    def shutdown(self):
-        pass
-
     def log(self, message):
         pass
 
@@ -100,5 +97,5 @@ class GUI:
     
     def shutdown(self):
         self.update()
-        print(self.desktop.get_stats())
+        self.logger.log(1,str(self.desktop.get_stats()))
         return self.logger

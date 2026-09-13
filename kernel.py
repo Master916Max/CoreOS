@@ -1,10 +1,11 @@
-from ast import excepthandler
-from time import time
-import time
+import pickle
+import stat
+from time import time, sleep
 from enum import Enum
 from typing import Any
 import pygame
 
+from subsystems.qadbio import QaDBIO
 from subsystems.syscall import SyscallManager
 from subsystems.common import SyscallReturn, SyscallReturnType
 from subsystems.tui import TextUserInterface
@@ -54,55 +55,175 @@ class KernelException(Exception):
 
 class Error:
     def __init__(self, string):
-        self.time = time.time()
+        self.time = time()
         self.error = string
-
+    def __str__(self) -> str:
+        return self.error
 
 def generate_error(exception_type: str, message: str, module: str = "kernel") -> Error:
-    timestamp = time.time()
-
+    timestamp = time()
     fake_exception = f"[MOS/{module}] {exception_type}: {message} (at 0x{timestamp:.0f})"
     return Error(fake_exception)
 
+#
+# Red Screen of Death
+#
 
+def show_rsod(ks: KernelState, screen: pygame.Surface) -> None:
+    if ks.bsod_counter < 10:
+        return
+    else:
+        pygame.mouse.set_visible(False)
+        ks.rsod = True
+
+    mr = MimirRender(screen)
+    mr.background_color = (64, 0, 0) # pyright: ignore[reportAttributeAccessIssue]
+
+    texts = [
+        "MOS has encountered multiple critical error.",
+        "The Kernel has been stopped to prevent further damage.",
+        "Please reset this installation.",
+        f"Error: {str(ks.last_state.bsod_error)}", # pyright: ignore[reportOptionalMemberAccess]
+        "Press ESC to shut down."
+    ]
+
+    font_size = 32
+    line_height = 50
+    font = pygame.font.SysFont(None, font_size)
+
+    total_height = len(texts) * line_height
+    start_y = (mr.get_height() - total_height) // 2
+
+    # Textobjekte nur EINMAL erstellen
+    for i, text in enumerate(texts):
+        text_width = font.size(text)[0]
+
+        x = (mr.get_width() - text_width) // 2
+        y = start_y + i * line_height
+
+        mr.create_Text(
+            x,
+            y,
+            text,
+            font_size,
+            (255, 255, 255)
+        )
+
+    # RSOD läuft dauerhaft
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                ks.aktive = False
+                return
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    ks.aktive = False
+                    return
+
+        mr.render()
+        pygame.display.flip()
+
+#
+# Kernel State Class
+#
+
+class KernelState:
+    last_state: KernelState
+    errors: list[Error]
+    mode: str                       = "TUI"
+    aktive: bool                    = True
+    shutdown: bool                  = False
+    debug_enabled:bool              = False
+    rsod: bool                      = False
+    bsod_counter: int               = 0
+    bsod_error:Error| None          = None
+
+def save_ks(ks:KernelState) -> None:
+    ks.last_state = KernelState()
+    try:
+        with open("generate\\last_ks.bin", "+wb") as f:
+            pickle.dump(ks,f)
+    except Exception as e:
+        print("Error:" + str(e) + " \nwhile Saving the Kernel-State")
+    return
+
+def load_last_ks() -> KernelState:
+    try:
+        with open("generate\\last_ks.bin", "+rb") as f:
+            ks = pickle.load(f)
+        return ks
+    except FileNotFoundError:
+        print("No Last Kernel-State Found")
+        return KernelState()
+    except Exception as e:
+        print("Error:" + str(e) + " \nwhile Saving the Kernel-State")
+        return KernelState()
+
+#
+# Kernel Mode
+#
+
+class KernelMode:
+    UI_Mode         :str    = "TUI"
+    Debug_Mode      : bool  = False
+    Recovery_Mode   : bool  = False
+
+#
+# Kernel
+#
 class Kernel:
-    def __init__(self, screen: Any, debug_mode: bool = False):
-        self.crashdump_req = False
-        self.errors = []
-        self.is_shutdown = False
-        self.debug_mode = debug_mode
-        self.screen: pygame.Surface
-        self.gui: GUI | None
-        self.tui: TextUserInterface | None
-        self.logger: Logger
-        self.mode : str
-        self.debuger: Debugger | None
-        self.memoryManager: MemoryManager
-        self.process_manager: ProcessManager
-        self.sheduler: Sheduler
-        self.drivers_manager: DriverManager
-        self.dll_manager: DLLManager
-        self.service_manager: ServiceManager
-        self.syscall_manager: SyscallManager
+    def __init__(self, screen: Any, kernelmode: KernelMode= KernelMode()):
+        self.state = KernelState()
+        state = self.state
 
-        def init(screen: Any):
+        #Creating Kernel State Externals
+        self.errors         = []
+        self.aktive         = True
+        self.is_shutdown    = False
+        self.mode : str     = kernelmode.UI_Mode
+        self.debug_mode     = kernelmode.Debug_Mode
+
+        # Giving the State all externals
+        state.errors        = self.errors
+        state.aktive        = self.aktive
+        state.shutdown      = self.is_shutdown
+        state.mode          = self.mode
+        state.debug_enabled = self.debug_mode
+
+        # Other Kernel Variables
+        self.crashdump_req = False
+        self.screen: pygame.Surface = screen
+
+        # Subsystems
+        self.qadbio:            QaDBIO                      = QaDBIO(self.screen)
+        self.gui:               GUI | None
+        self.tui:               TextUserInterface | None
+        self.debuger:           Debugger | None
+        self.logger:            Logger
+        self.memoryManager:     MemoryManager
+        self.process_manager:   ProcessManager
+        self.sheduler:          Sheduler
+        self.drivers_manager:   DriverManager
+        self.dll_manager:       DLLManager
+        self.service_manager:   ServiceManager
+        self.syscall_manager:   SyscallManager
+
+        def init(screen: Any) -> None:
 
             #Setting Up Unchangeable Variables
-            self.screen = screen
             self.logger = Logger()
-            
-            self.mode = "TUI"
 
-            self.QaDBIO(0)
+            self.qadbio.show(0)
 
             if self.debug_mode:
                 self.debuger = Debugger(self)
 
 
             # Custom System Memory
-            self.memoryManager = MemoryManager()  # Initialize the memory manager
+            self.memoryManager = MemoryManager()
 
-            self.QaDBIO(1)
+            self.qadbio.show(1)
 
             if self.mode == "TUI":
                 self.tui = TextUserInterface(screen, self.memoryManager)
@@ -111,7 +232,7 @@ class Kernel:
                 self.tui = None
                 self.gui = GUI(screen)
             
-            self.QaDBIO(2)
+            self.qadbio.show(2)
 
             self.process_manager =      ProcessManager()
             self.sheduler =             Sheduler(self.process_manager.get_process,self.process_manager.run)
@@ -120,22 +241,22 @@ class Kernel:
             if self.gui:
                 self.gui.set_shedueler(self.sheduler)
 
-            self.QaDBIO(3)
+            self.qadbio.show(3)
 
             self.drivers_manager =      DriverManager()
 
-            self.QaDBIO(4)
+            self.qadbio.show(4)
 
             self.dll_manager =          DLLManager()
             self.service_manager =      ServiceManager()
 
             self.syscall_manager =      SyscallManager(self.memoryManager)
 
-            self.QaDBIO(5)
+            self.qadbio.show(5)
 
             self.drivers_manager.load("ntfs")
 
-            self.QaDBIO(6)
+            self.qadbio.show(6)
 
             if self.tui:
                 self.tui.set_up_syscalls()
@@ -147,105 +268,73 @@ class Kernel:
 
             self.syscall_manager.add_syscalls()
 
-            self.QaDBIO(7)
+            self.qadbio.show(7)
 
             self.test_system()
             
-            self.QaDBIO(8)
+            self.qadbio.show(8)
 
             self.logger.log(1,"Start-Up Finished")
             self.load_init_process()
             # for i in range(500):
             #     self.load_init_process(i+10)
             #     self.tui.update()
-            self.QaDBIO(100)
+            self.qadbio.show(100)
 
             while self.sheduler.runnable():
                 self.sheduler.loop()
                 if self.tui:
-                    self.tui.update()
+                    self.tui.handle_event()
                 if self.gui:
-                    self.gui.update()
+                    self.gui.handle_event()
 
             self.shutdown()
             #self.syscall_manager.handle_syscall(1,1024,())
+        
+        self.state.last_state   = load_last_ks()
+        self.state.bsod_counter = self.state.last_state.bsod_counter
+        self.state.bsod_error   = self.state.last_state.bsod_error
+        print(str(self.state.last_state.bsod_counter) + "\\10")
+
+        self.handle_rsod(kernelmode)
+
+        if not self.state.aktive: return
+
+        
 
         try:
             init(screen)  
         except KernelException as ke:
-            
+            self.crashdump_req = True
+
             if ke.type == KernelError.NoInitProcess:
                 self.errors.append(generate_error("No-Init-Process","No Init Programm found","Kernel-Boot"))
                 self.panic(KernelError.NoInitProcess)
+                return      
         except Exception as e:
+            self.errors.append(generate_error(str(type(e).__name__),"Happend dnw when","Kernel/BOOT"))
             self.crashdump_req = True
-            self.errors.append(Error(e))
             print(e)
             self.panic(KernelError.InitFailed)
             return
-        
-        self.panic(KernelError.NoProcess)
-
-
-
-    def QaDBIO(self, state:int) -> None:
-        """
-        Quick and Dirty Boot Information Output, give the user the Current State of the Kernel until the First Process is Executed.
-        The uses a Temporary MimirRenderer to Output the Information
-
-        Args:
-            state (int): The Current State of the Boot Process(Each Number is hardcoded to a specific State, see below)
-
-        State 0: Initializing the Memory Manager\n
-        State 1: Initializing the Graphics System\n
-        State 2: Initializing the Process Manager and the Sheduler\n
-        State 3: Initializing the Drivers Manager\n
-        State 4: Initializing the Syscall Manager\n
-        State 5: Loading all the Drivers\n
-        State 6: Loading all the Syscalls\n
-        State 7: Testing the System\n
-        State 8: Handing Graphics Control to the Graphics Subsystem and Starting the Init Process
-        """
-        if state == 0:
-            # Setting up the
-            self.tmp_mr = MimirRender(self.screen)
-            self.line = 0
-            self.line_height = 40
-        elif state == 100:
-            del self.tmp_mr
-            del self.line
-            del self.line_height
-            #del self.print_txt_QaDBIO
-            #del self.QaDBIO
+        except KeyboardInterrupt as e:
+            self.errors.append(generate_error(str(type(e).__name__),"Happend dnw when","Kernel/RUN_TIME"))
+            self.crashdump_req = True
+            print(e)
+            self.panic(KernelError.InitFailed)
             return
-        
-        match state:
-            case 0:
-                self.print_txt_QaDBIO("Initializing Memory Manager...")
-            case 1:
-                self.print_txt_QaDBIO("Initializing Graphics System...")
-            case 2:
-                self.print_txt_QaDBIO("Initializing Process Manager and Scheduler...")
-            case 3:
-                self.print_txt_QaDBIO("Initializing Drivers Manager...")
-            case 4:
-                self.print_txt_QaDBIO("Initializing Syscall Manager...")
-            case 5:
-                self.print_txt_QaDBIO("Loading Drivers...")
-            case 6:
-                self.print_txt_QaDBIO("Loading Syscalls...")
-            case 7:
-                self.print_txt_QaDBIO("Testing System...")
-            case 8:
-                self.print_txt_QaDBIO("Handing Graphics Control to the Graphics Subsystem and Starting the Init Process...")
-        
-        time.sleep(0.1)
+        finally:
+            self.panic(KernelError.NoProcess)
 
-    def print_txt_QaDBIO(self,text) -> None:
-        self.tmp_mr.create_Text(0,self.line*self.line_height,text,24,(255,255,255)) 
-        self.line += 1
-        self.tmp_mr.render()
-        pygame.display.flip()
+    def handle_rsod(self, kernel_mode: KernelMode) -> None:
+
+        if kernel_mode.Recovery_Mode:   return
+
+        show_rsod(self.state,self.screen)
+
+        if not self.state.aktive:
+            save_ks(self.state)
+            return
 
     def get_all_logs(self) -> None:
         self.logs = {}
@@ -290,9 +379,9 @@ class Kernel:
     
     def add_syscall_subroutines(self):
         if self.tui:
-            self.syscall_manager.add_syscall_subroutine(self.tui.update)
+            self.syscall_manager.add_syscall_subroutine(self.tui.handle_event)
         if self.gui:
-            self.syscall_manager.add_syscall_subroutine(self.gui.update)
+            self.syscall_manager.add_syscall_subroutine(self.gui.handle_event)
         pass
 
     # Kernel Methods
@@ -301,11 +390,11 @@ class Kernel:
         if self.tui:
             self.syscall_manager.handle_syscall(1,301,())
 
-        ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("test.test","w"))
+        ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("generate\\test.test","w"))
         self.syscall_manager.handle_syscall(1,4,(ret.value,"Dies ist ein Test."))
         self.syscall_manager.handle_syscall(1,2,ret.value)
 
-        ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("test.test","r"))
+        ret: SyscallReturn = self.syscall_manager.handle_syscall(1,1,("generate\\test.test","r"))
         file = self.syscall_manager.handle_syscall(1,3,(ret.value,18)).value
         self.syscall_manager.handle_syscall(1,2,ret.value)
 
@@ -321,16 +410,22 @@ class Kernel:
         errors = ""
         for error in self.errors:
             errors += error.error + "\n"
-        dump = f"MOS-Kernel-Crashdump:\nLatest Error:\n{latest_error}\n Errors:{errors}\nMemory:\n{txt}"
-        with open("latest-error.crdmp", "w") as f:
+        dump = f"MOS-Kernel-Crashdump:\nLatest Error:\n{latest_error}\nErrors:\n{errors}\nMemory:\n{txt}"
+        with open("generate\\latest-error.crdmp", "w") as f:
             f.write(dump)
         pass
 
-
     def panic(self, error:KernelError):
         if self.is_shutdown:
-            self.wait(1)
+            self.wait(0)
+            self.state.bsod_counter = 0
+            save_ks(self.state)
             return
+        self.state.bsod_counter += 1
+        txts: list[str] = [str(error) for error in self.errors]
+        print("Errors: ", txts)
+        self.state.bsod_error = self.errors[0]
+
         if not self.tui:
             self.tui = TextUserInterface(self.screen, self.memoryManager)
         self.tui.clear()
@@ -345,19 +440,19 @@ class Kernel:
                 self.tui.print_line("The Initialization failed.")
         self.tui.print_line(        "---------------Kernel-Panic---------------")
         self.generate_dump()
-        self.wait(2)
+        self.wait(.5)
         self.shutdown()
         self.wait(2)
+        save_ks(self.state)
 
-           
     def shutdown(self):
         self.is_shutdown = True
         
         syscall_logs = self.syscall_manager.shutdown()
         if self.tui:
-            tui_logs =     self.tui.shutdown()
+            tui_logs = self.tui.shutdown()
         if self.gui:
-                   gui_logs =     self.gui.shutdown()
+            gui_logs = self.gui.shutdown()
         sheduler_logs =self.sheduler.shutdown()
         memory_logs =  self.memoryManager.shutdown()
 
@@ -374,19 +469,21 @@ class Kernel:
 
         for timestamp, log in sorted(logs.items()):
             #print(log)
+            if log.priority < 1 and not self.crashdump_req:
+                continue
             logs_txt = logs_txt + str(log) + "\n"
         
-        with open("logs.log","w") as f:
+        with open("generate\\logs.log","w") as f:
             f.write(logs_txt)
         
         print("Shutdown Success")
 
     def wait(self,adds):
-        start = time.time()
+        start = time()
 
         add = start + adds
 
-        while time.time() <= add:
+        while time() <= add:
             if self.tui:
                 self.tui.update()
             if self.gui:
@@ -399,6 +496,6 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode(Resolutions.R_1080P.value,pygame.FULLSCREEN)
 
-    kernel = Kernel(screen, debug_mode=False)
+    kernel = Kernel(screen)
 
     pygame.quit()
