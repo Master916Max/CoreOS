@@ -1,0 +1,16 @@
+
+def require_tui():syscall(301)
+
+def unlock_tui():syscall(302)
+
+def print(text):syscall(303,text)
+
+def printl(text):syscall(304,text)
+
+def read_c() -> str:
+    return syscall(321)
+
+def read_l() -> str:
+    return syscall(322)
+
+def sleep(ms): syscall(909, ms)

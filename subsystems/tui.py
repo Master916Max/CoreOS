@@ -1,5 +1,3 @@
-from operator import truediv
-from typing import Dict
 import pygame
 
 from .GUI.MimirRender import MimirRender
@@ -35,6 +33,7 @@ class TextUserInterface:
         self.input_aktive = False
         self.input_mode = "line"
         self.input_buffer = ""
+        self.do_show_input   = False
 
         self.need_update = True
 
@@ -58,6 +57,14 @@ class TextUserInterface:
         self.current_line += 1  # Move to the next line for the next input
         self.update()
 
+    def print_char(self, text, line_number = None):
+            self.need_update = True
+            self.handle_max_line()
+            if line_number is None:
+                line_number = self.current_line
+            self.lines[line_number] = self.lines[line_number] + text  # Truncate text if it's too long
+            self.update()
+
     def set_bg(self, color:pygame.color.Color):
         self.mr.background_color = color
     
@@ -74,6 +81,8 @@ class TextUserInterface:
         if self.need_update or True:
             self.mr.clear()
             for idx, line in enumerate(self.lines):
+                if idx == self.current_line and self.do_show_input:
+                    line = line + self.input_buffer
                 self.draw_text(line, (10, idx * self.font.get_height() + 10))
         self.mr.render()
         self.mr.calc_fps()
@@ -88,6 +97,7 @@ class TextUserInterface:
                 exit()
             elif event.type == pygame.KEYDOWN:
                 if self.input_aktive:
+                    if self.do_show_input: self.need_update = True
                     if event.key == pygame.K_BACKSPACE:
                         self.input_buffer = self.input_buffer[:-1]
                     elif event.key == pygame.K_RETURN:
@@ -144,6 +154,12 @@ class TextUserInterface:
             self.handle_event()
             return SyscallReturn(SyscallReturnType.Succes, 1)
 
+    def print_c(self,pid, text):
+            if pid == self.lock:
+                self.print_char(text)
+                self.handle_event()
+                return SyscallReturn(SyscallReturnType.Succes, 1)
+
     def read_char(self,pid, _):
         if pid == self.lock:
             if self.input_aktive: return SyscallReturn(SyscallReturnType.Error, "")
@@ -162,6 +178,16 @@ class TextUserInterface:
             self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
             return SyscallReturn(SyscallReturnType.Wait, 321)
 
+    def show_input(self,pid,_) -> SyscallReturn | None:
+        if self.lock == pid:
+            self.do_show_input = True
+            return SyscallReturn(SyscallReturnType.Succes, 0)
+
+    def hide_input(self,pid,_) -> SyscallReturn | None:
+            if self.lock == pid:
+                self.do_show_input = False
+                return SyscallReturn(SyscallReturnType.Succes, 0)
+
     def set_up_syscalls(self):
         pass
         def write(self,syscall_id,func):
@@ -169,9 +195,12 @@ class TextUserInterface:
         
         write(self,301,self.require_tui)
         write(self,302, self.unlock_tui)
+        write(self,303,self.print_c)
         write(self,304,self.print)
         write(self,321,self.read_char)
         write(self,322,self.read_line)
+        write(self,331,self.show_input)
+        write(self,332,self.hide_input)
     
     def shutdown(self):
         self.clear()

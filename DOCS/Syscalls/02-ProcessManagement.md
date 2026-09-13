@@ -49,6 +49,7 @@ Prozessmanagement-Syscalls für Erstellung, Steuerung, Prioritäten und Ressourc
 | 132 | [`unregister_service`](#132-unregister_service) | Service abmelden | Service |
 | 133 | [`get_services`](#133-get_services) | Alle Services auflisten | Service |
 | 134 | [`get_service_handle`](#134-get_service_handle) | Service-Handle abrufen | Service |
+| 141 | [`load_libary`](#141-load_libary)| Lädt eine Static Lib in Namespace| Both|
 
 ---
 

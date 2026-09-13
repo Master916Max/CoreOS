@@ -2,19 +2,7 @@
 # Needs Export
 #
 
-def require_tui():syscall(301) # pyright: ignore[reportUndefinedVariable]
-
-def unlock_tui():syscall(302) # pyright: ignore[reportUndefinedVariable]
-
-def printl(text):syscall(304,text) # pyright: ignore[reportUndefinedVariable]
-
-def read_c() -> str:
-    return syscall(321) # pyright: ignore[reportUndefinedVariable]
-
-def read_l() -> str:
-    return syscall(322) # pyright: ignore[reportUndefinedVariable]
-
-def sleep(ms): syscall(909, ms) # pyright: ignore[reportUndefinedVariable]
+syscall(141, "stfn.lib")
 
 pid = ret # pyright: ignore[reportUndefinedVariable]
 
@@ -24,29 +12,26 @@ pid = ret # pyright: ignore[reportUndefinedVariable]
 
 require_tui()
 
-printl(f"Running process {pid} with x=12 and i=22")
+printl(f"The Basic MOS-TUI-Shell has started")
 
 unlock_tui()
 
 sleep(10)
 
-for i in range(10):
-    require_tui()
-    printl(f"PID: {pid}I: {i};Hello")
-    unlock_tui()
 require_tui()
-printl(f"Test Hello")
-unlock_tui()
 
-require_tui()
+syscall(331) # pyright: ignore[reportUndefinedVariable]
+
 while True:
+    print(">")
     line = read_l()
     if line == "sh" or line == "shutdown":
         break
     else:
         printl(line)
 
+syscall(332) # pyright: ignore[reportUndefinedVariable]
 
 unlock_tui()
-syscall(400)
+syscall(400) # pyright: ignore[reportUndefinedVariable]
 #4i  82ujkJHKGFGJHGJHGJHG

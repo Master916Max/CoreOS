@@ -264,6 +264,8 @@ class Kernel:
 
             self.sheduler.register_syscalls(self.memoryManager)
 
+            self.process_manager.add_syscalls(self.memoryManager)
+
             self.add_syscall_subroutines()
 
             self.syscall_manager.add_syscalls()

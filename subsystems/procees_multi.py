@@ -1,4 +1,6 @@
 from typing import Any
+
+from subsystems.memory import MemoryManager
 from .logging import Logger
 from greenlet import greenlet
 from .common import SyscallReturn, SyscallReturnType
@@ -15,6 +17,7 @@ class Process:
         self._gl         = greenlet()
         self._started    = False
         self.ui_input    = ""
+        self._to_load    = ""
 
     def load_code(self, code: str):
         self.code = code
@@ -41,6 +44,8 @@ class Process:
                     return None
             self.namespace["ret"] = ret
         self._mgr_gl.switch()
+        if self._to_load != "":
+            self._load_lib()
         return self.namespace.get("ret")
 
     def _run(self):
@@ -53,7 +58,13 @@ class Process:
         self.state = "terminated"
         self._mgr_gl.switch()
 
+    def _load_lib(self):
+        exec(self._to_load,self.namespace)
 
+    def add_lib(self, code):
+        self._to_load += code
+
+        
 class ProcessManager:
     def __init__(self):
         self.processes: dict[int, Process] = {}
@@ -89,3 +100,25 @@ class ProcessManager:
         if process_.state == "terminated":
             self.terminate_process(pid)
             return "finished"
+
+    #
+    # Syscalls
+    #
+    def load_lib(self, pid, name):
+        code = ""
+        if name == "stfn.lib":
+            with open("virtual/fs/stfn.lib", "r") as f:
+                code = f.read()
+
+        self.get_process(pid).add_lib(code) # pyright: ignore[reportOptionalMemberAccess]
+
+
+
+    def add_syscalls(self, memory_mgr: MemoryManager):
+        self.mmr: MemoryManager = memory_mgr
+        
+
+        def write(self,id,func):
+            self.mmr.write("syscall_mgr",self.mmr.gst_ptr + id,func)
+
+        write(self,141,self.load_lib)
