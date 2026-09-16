@@ -4,10 +4,6 @@ from .GUI.MimirRender import MimirRender
 from .GUI.desktop import Desktop
 from .GUI._layer_s import Layer, LayerManager
 
-from .logging import Logger
-from .sheduler import Sheduler
-from .common import SyscallReturn,SyscallReturnType
-from .memory import MemoryManager, Cell
 
 class Window:
     def __init__(self, title, owner, size:tuple):
@@ -43,16 +39,9 @@ class GUI:
         self.window_manager = WindowManager()
         self.desktop = Desktop(self.dektop_surface)
 
-
-        self.shedueler : Sheduler
-        self.gst_offset = 400
-        self.memory_mgr: MemoryManager
-
         self.height = self.screen.get_height()
         self.width = self.screen.get_width()
 
-        
-        
         self.need_update = True
 
         self.logger = Logger()
