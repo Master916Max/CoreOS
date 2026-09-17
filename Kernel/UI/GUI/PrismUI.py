@@ -1,4 +1,3 @@
-import pygame
 from dataclasses import dataclass
 import pygame
 from .MimirRender import MimirRender

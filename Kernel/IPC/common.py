@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import uuid4
 from enum import Enum
 
 class Module(Enum):
@@ -15,7 +15,7 @@ class Message:
         self.to = Module.NONE
         self.content = {}
         self.answer_required = False
-        self.msg_id = UUID()
+        self.msg_id = uuid4()
 
     def set_header(self,_from:Module,to:Module,answer_required:bool=False):
         self._from = _from

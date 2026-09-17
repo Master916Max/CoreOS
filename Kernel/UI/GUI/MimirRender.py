@@ -81,7 +81,8 @@ class MimirRender:
         if self.need_tick:
             if self.cap:
                 self.clock.tick(self.fps)
-            self.clock.tick()
+            else:
+                self.clock.tick()
 
     def render_fps(self):
         current = self.clock.get_fps()

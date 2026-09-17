@@ -34,7 +34,7 @@ class IPCErrorCode(ErrorCode):
 
 class Error:
     def __init__(self,error_type:ErrorType,error_code:ErrorCode,message:str) -> None:
-        if not isinstance(error_type,ErrorType) or not isinstance(error_code,int) or not isinstance(message,str):
+        if not isinstance(error_type,ErrorType) or not isinstance(error_code,ErrorCode) or not isinstance(message,str):
             raise TypeError("Invalid argument types")
         self.error_type = error_type
         self.error_code = error_code
