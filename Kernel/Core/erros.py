@@ -18,6 +18,7 @@ class MemoryErrorCode(ErrorCode):
     OutOfMemory = 0
     MemoryCorruptionDetected = 1
     NoPermissionToAccessMemory = 2
+    InvalidMemorySize = 3
 
 class PermissionErrorCode(ErrorCode):
     InvalidPermission = 0

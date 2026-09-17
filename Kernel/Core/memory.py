@@ -1,8 +1,8 @@
 from types import FunctionType
 from typing import Any
-from random import randint
 
 from ..IPC.common import Message, Module
+from .erros import IPCErrorCode, MemoryErrorCode, ErrorType, Error,Return
 
 from .logger import Logger
 
@@ -17,108 +17,239 @@ class Cell:
         return self.__rpr__()
 
 class MemoryManager:
-    def __init__(self, rout_msg:FunctionType):
+    def __init__(self, rout_msg: FunctionType) -> None:
         self.logger = Logger()
+
         self.memory = [
             Cell(None, None)
             for _ in range(1024 * 8)
         ]
 
         self.msg_rout = rout_msg
-        self.msg_queue = []
+        self.msg_queue: list[Message] = []
 
-        # Pointers of starts of free spaces in memory
-        self.empty_pointers = [0]
-        self.data_pointers = []
+        # -------------------------------------------------
+        # Memory layout
+        # -------------------------------------------------
 
-        kernel_pointer = randint(0,1024*4)
+        self.memory_size = len(self.memory)
 
-        self.gst_ptr = kernel_pointer
+        # Track allocated/reserved cells
+        self.data_pointers = set()
+        
+        # -------------------------------------------------
+        # Free memory blocks
+        #
+        # (start, size)
+        # -------------------------------------------------
+        self.empty_pointers = []
+        self.empty_pointers.append((0, self.memory_size))
 
-        for i in range(1024*2):
-            self.memory[self.gst_ptr + i] = Cell("syscall_mgr",None)
-            self.data_pointers.append(self.gst_ptr + i)
 
+        # Register memory manager
         register_msg = Message()
-        register_msg.set_header(Module.MEMORY,Module.IPC,False)
+        register_msg.set_header(
+            Module.MEMORY,
+            Module.IPC,
+            False
+        )
         register_msg.set_body({
             "action": "register",
             "module": Module.MEMORY,
             "queue": self.msg_queue
-        })
+            })
+
         self.msg_rout(register_msg)
-        
-    def malloc(self,owner,size):
+
+        self.action = {
+            "kalloc" : self.malloc,
+            "read"   : self.read,
+            "write"  : self.write,
+            "free"   : self.free
+        }
+
+    def malloc(self, owner, size) -> Return:
         self.logger.log(0,f"Owner:{owner} allocated: {size}")
-        if len(self.empty_pointers) == 0:
-            raise MemoryError("Out of Memory")
-        # Get the next free space in memory
 
-        found_space = False
-        iteration = 1
-        mem_pointer = 0
+        if size <= 0:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Size can't be 0 long!"))
 
-        while not found_space:
-            next_free_space = self.empty_pointers[-iteration]
+        # Find a free block large enough
+        for index, (start, block_size) in enumerate(self.empty_pointers):
+            if block_size < size:
+                continue
+
+            pointer = start
+            # Mark memory as allocated
             for i in range(size):
-                if i + next_free_space in self.data_pointers:
-                    continue
-                if i + next_free_space >= len(self.memory):
-                    raise MemoryError("Out of Memory")
-            
-            found_space = True
-            mem_pointer = next_free_space
-        
-        # Mark the space as used
-        for i in range(size):
-            self.memory[mem_pointer + i] = Cell(owner,None)
-            self.data_pointers.append(mem_pointer + i)
-        # Remove the pointer from the empty pointers list
-        self.empty_pointers.remove(mem_pointer)
-        self.empty_pointers.append(mem_pointer + size + 1)
-        return mem_pointer
+                address = pointer + i
+                self.memory[address] = Cell(owner,None)
+                self.data_pointers.add(address)
 
-    def free(self,owner,pointer,size):
+            # -------------------------------------------------
+            # Update free block
+            # -------------------------------------------------
+            remaining = block_size - size
+
+            if remaining == 0:
+                # The entire block was used
+                self.empty_pointers.pop(index)
+            else:
+                # Keep the remaining part
+                self.empty_pointers[index] = (start + size,remaining)
+
+            return Return(pointer)
+
+        # No block was large enough
+        return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.OutOfMemory,"Out off Memory!"))
+
+    def free(self, owner, pointer, size) -> Return:
         self.logger.log(0,f"Owner:{owner} freed: {size} at: {pointer}")
+
+        if size <= 0:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Size can't be 0 long!"))
+
+        if pointer < 0:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Pointer can't be less then 0!"))
+
+        if pointer + size > self.memory_size:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Memory range is out of bounds"))
+
+        # -------------------------------------------------
+        # Verify ownership BEFORE changing anything
+        # -------------------------------------------------
+
         for i in range(size):
-            if self.memory[pointer + i].owner != owner:
-                raise MemoryError("Memory Corruption Detected")
-            self.memory[pointer + i] = Cell(None,None)
-            self.data_pointers.remove(pointer + i)
-        self.empty_pointers.append(pointer)
-    
-    def read(self,owner,pointer):
+            address = pointer + i
+
+            if address not in self.data_pointers:
+                return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.MemoryCorruptionDetected,"Memory Corruption Detected"))
+
+            if self.memory[address].owner != owner:
+                return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.MemoryCorruptionDetected,"Memory Corruption Detected"))
+
+        # -------------------------------------------------
+        # Free memory
+        # -------------------------------------------------
+
+        for i in range(size):
+            address = pointer + i
+            self.memory[address] = Cell(None,None)
+            self.data_pointers.remove(address)
+
+        # Add newly freed block
+        self.empty_pointers.append((pointer, size))
+
+        # Merge adjacent blocks
+        self._merge_free_blocks()
+        return Return(True)
+
+    def _merge_free_blocks(self):
+        """
+        Merge neighbouring free memory blocks.
+
+        Example:
+
+        (0, 10)
+        (10, 20)
+
+        becomes:
+
+        (0, 30)
+        """
+
+        if not self.empty_pointers:
+            return
+
+        # Sort by memory address
+        self.empty_pointers.sort(key=lambda block: block[0])
+
+        merged = []
+
+        for start, size in self.empty_pointers:
+
+            if not merged:
+                merged.append((start, size))
+                continue
+
+            previous_start, previous_size = merged[-1]
+            previous_end = ( previous_start + previous_size)
+            
+            # Blocks are directly adjacent
+            if previous_end == start:
+                merged[-1] = (previous_start,previous_size + size)
+            else:
+                merged.append((start, size))
+
+        self.empty_pointers = merged
+
+    def read(self, owner, pointer) -> Return:
         self.logger.log(0,f"Owner:{owner} read: {pointer}")
+
+        if pointer < 0 or pointer >= self.memory_size:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Invalid memory pointer"))
+
         if self.memory[pointer].owner != owner:
-            raise MemoryError("Memory Corruption Detected")
-        return self.memory[pointer].content
-    
-    def write(self,owner,pointer,data):
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.MemoryCorruptionDetected,"Memory Corruption Detected"))
+
+        return Return(self.memory[pointer].content)
+
+    def write(self, owner, pointer, data) -> Return:
         self.logger.log(0,f"Owner:{owner} wrote: {pointer} at: {data}")
+
+        if pointer < 0 or pointer >= self.memory_size:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Invalid memory pointer"))
+
         if self.memory[pointer].owner != owner:
-            raise MemoryError("Memory Corruption Detected")
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.MemoryCorruptionDetected,"Memory Corruption Detected"))
+
         self.memory[pointer].content = data
-    
-    def shutdown(self):
-        self.data_pointers = []
+        return Return(True)
+
+    def shutdown(self) -> Logger:
+        self.data_pointers = set()
         self.empty_pointers = []
         self.memory = []
-        
+
         return self.logger
 
-    def handle_messages(self):
-        while len(self.msg_queue) > 0:
-            msg = self.msg_queue.pop(0)
-            if msg.to == Module.MEMORY:
-                if msg.content["action"] == "malloc":
-                    pointer = self.malloc(msg.content["owner"],msg.content["size"])
-                    answer_msg = msg.answer({"pointer": pointer})
-                    self.msg_rout(answer_msg)
-                elif msg.content["action"] == "free":
-                    self.free(msg.content["owner"],msg.content["pointer"],msg.content["size"])
-                elif msg.content["action"] == "read":
-                    data = self.read(msg.content["owner"],msg.content["pointer"])
-                    answer_msg = msg.answer({"data": data})
-                    self.msg_rout(answer_msg)
-                elif msg.content["action"] == "write":
-                    self.write(msg.content["owner"],msg.content["pointer"],msg.content["data"])
+    def handle_msgs(self) -> None:
+        for msg in self.msg_queue:
+            body = msg.get_body()
+            action = body.get("action", None)
+
+            if action in self.action:
+                match action:
+                    case "kalloc":
+                        msg.answer({
+                            "action":"return",
+                            "return":self.malloc(body.get("owner", None),body.get("size", 0))
+                        })
+                        break
+                    case "free":
+                        msg.answer({
+                            "action":"return",
+                            "return":self.free(body.get("owner", None),body.get("pointer", 0),body.get("size", 0))
+                        })
+                        break
+                    case "read":
+                        msg.answer({
+                            "action":"return",
+                            "return":self.read(body.get("owner", None),body.get("pointer", 0))
+                        })
+                        break
+                    case "write":
+                        msg.answer({
+                            "action":"return",
+                            "return":self.write(body.get("owner", None),body.get("pointer", 0),body.get("data", None))
+                        })
+                        break
+            else:
+                msg.answer(
+                    {
+                        "action":"return",
+                        "error" : ErrorType.IPCError,
+                        "code"  : IPCErrorCode.InvalideMSGBody
+                    }
+                )
+
