@@ -10,6 +10,8 @@ class InterProcessCommunication:
 
 
     def route_msg(self, msg: Message):
+        if not self.header_validation(msg).value:
+            return self.header_validation(msg)
         if msg.to in self.module_reg:
             self.module_reg[msg.to].append(msg)
         else:
@@ -32,3 +34,10 @@ class InterProcessCommunication:
                     continue
                 case _ :
                     continue
+    def header_validation(self, msg:Message) -> Return:
+        if msg._from == msg.to:
+            return Return(False,Error(ErrorType.IPCError,IPCErrorCode.InvalideMSGHeader,"You can´t send Messages to your self!"))
+        elif msg.to == Module.NONE or msg._from == Module.NONE:
+            return Return(False,Error(ErrorType.IPCError,IPCErrorCode.InvalideMSGHeader,"You can´t send Messages with no set Sender or Reciever!"))
+        return Return(True)
+        

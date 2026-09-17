@@ -15,6 +15,7 @@ class Message:
         self.to = Module.NONE
         self.content = {}
         self.answer_required = False
+        self.msg_id = UUID()
 
     def set_header(self,_from:Module,to:Module,answer_required:bool=False):
         self._from = _from
@@ -37,4 +38,5 @@ class Message:
         _msg = Message()
         _msg.set_header(self.to,self._from,False)
         _msg.set_body(content)
+        _msg.msg_id = self.msg_id
         return _msg

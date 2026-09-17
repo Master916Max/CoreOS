@@ -19,7 +19,10 @@ class Cell:
 class MemoryManager:
     def __init__(self, rout_msg:FunctionType):
         self.logger = Logger()
-        self.memory = [Cell(None,None)]*1024*8
+        self.memory = [
+            Cell(None, None)
+            for _ in range(1024 * 8)
+        ]
 
         self.msg_rout = rout_msg
         self.msg_queue = []
