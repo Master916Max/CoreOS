@@ -2,10 +2,10 @@ from uuid import UUID
 from enum import Enum
 
 class Module(Enum):
-    KERNEL = "kernel",
-    MEMORY = "memory",
-    IPC = "ipc",
-    NONE = "",
+    KERNEL = "kernel"
+    MEMORY = "memory"
+    IPC = "ipc"
+    NONE = ""
 
 
 

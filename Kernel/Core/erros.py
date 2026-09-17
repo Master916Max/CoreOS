@@ -2,33 +2,33 @@ from enum import Enum
 from typing import Any
 
 class ErrorType(Enum):
-    LoggerError = 0,
-    MemoryError = 1,
-    PermissionError = 2,
-    IPCError = 3,
+    LoggerError = 0
+    MemoryError = 1
+    PermissionError = 2
+    IPCError = 3
 
 class ErrorCode(Enum):
     pass
 
 class LoggerErrorCode(ErrorCode):
-    InvalidArgumentTypes = 0,
-    InvalidLogLevel = 1,
+    InvalidArgumentTypes = 0
+    InvalidLogLevel = 1
 
 class MemoryErrorCode(ErrorCode):
-    OutOfMemory = 0,
-    MemoryCorruptionDetected = 1,
-    NoPermissionToAccessMemory = 2,
+    OutOfMemory = 0
+    MemoryCorruptionDetected = 1
+    NoPermissionToAccessMemory = 2
 
 class PermissionErrorCode(ErrorCode):
-    InvalidPermission = 0,
-    NotEnoughPermission = 1,
-    NotAllowedToRead = 2,
-    NotAllowedToWrite = 3,
+    InvalidPermission = 0
+    NotEnoughPermission = 1
+    NotAllowedToRead = 2
+    NotAllowedToWrite = 3
     NotAllowedToExecute = 4
 
 class IPCErrorCode(ErrorCode):
-    ModuleNotRegistered = 0,
-    InvalideMSGBody = 1,
+    ModuleNotRegistered = 0
+    InvalideMSGBody = 1
     InvalideMSGHeader = 2
 
 class Error:

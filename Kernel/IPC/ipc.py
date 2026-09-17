@@ -4,9 +4,10 @@ from ..Core.erros import Return, ErrorType, IPCErrorCode, Error
 
 class InterProcessCommunication:
     def __init__(self):
+        self.msg_queue = []
+
         self.module_reg: dict[Module,list] = {Module.IPC: self.msg_queue}
 
-        self.msg_queue = []
 
     def route_msg(self, msg: Message):
         if msg.to in self.module_reg:
