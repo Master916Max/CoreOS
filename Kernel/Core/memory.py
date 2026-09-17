@@ -75,6 +75,7 @@ class MemoryManager:
             self.data_pointers.append(mem_pointer + i)
         # Remove the pointer from the empty pointers list
         self.empty_pointers.remove(mem_pointer)
+        self.empty_pointers.append(mem_pointer + size + 1)
         return mem_pointer
 
     def free(self,owner,pointer,size):
