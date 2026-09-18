@@ -26,6 +26,7 @@ class InterProcessCommunication:
                         queue = msg.get_body().get("queue", None)
                         if queue:
                             self.module_reg[module] = queue
+                            self.msg_queue.remove(msg)
                             continue
                     msg.answer
                         

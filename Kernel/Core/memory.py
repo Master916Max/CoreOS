@@ -221,28 +221,28 @@ class MemoryManager:
             if action in self.action:
                 match action:
                     case "kalloc":
-                        msg.answer({
+                        self.msg_rout(msg.answer({
                             "action":"return",
                             "return":self.malloc(body.get("owner", None),body.get("size", 0))
-                        })
+                        }))
                         break
                     case "free":
-                        msg.answer({
+                        self.msg_rout(msg.answer({
                             "action":"return",
                             "return":self.free(body.get("owner", None),body.get("pointer", 0),body.get("size", 0))
-                        })
+                        }))
                         break
                     case "read":
-                        msg.answer({
+                        self.msg_rout(msg.answer({
                             "action":"return",
                             "return":self.read(body.get("owner", None),body.get("pointer", 0))
-                        })
+                        }))
                         break
                     case "write":
-                        msg.answer({
+                        self.msg_rout(msg.answer({
                             "action":"return",
                             "return":self.write(body.get("owner", None),body.get("pointer", 0),body.get("data", None))
-                        })
+                        }))
                         break
             else:
                 msg.answer(

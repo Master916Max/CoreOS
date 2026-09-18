@@ -106,7 +106,7 @@ class Sheduler:
                 return
         for pid in self.waiting_queue:
             if pid == rpid:
-                self.ready_queue.remove(rpid)
+                self.waiting_queue.remove(rpid)
                 return
         
     def shutdown(self):
