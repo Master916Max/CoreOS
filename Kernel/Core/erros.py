@@ -6,6 +6,9 @@ class ErrorType(Enum):
     MemoryError = 1
     PermissionError = 2
     IPCError = 3
+    TUIError = 4
+    KernelError = 5
+    SyscallError = 6
 
 class ErrorCode(Enum):
     pass

@@ -1,13 +1,15 @@
+from ast import Mod
+from types import FunctionType
+
 import pygame
 
 from .GUI.MimirRender import MimirRender
-from .logging import Logger
-from .sheduler import Sheduler
-from .common import SyscallReturn,SyscallReturnType
-from .memory import MemoryManager, Cell
+from ..Core.logger import Logger
+from ..IPC.common import Module,Message
+from ..Core.erros import Return,Error,ErrorType
 
 class TextUserInterface:
-    def __init__(self, screen,memory_mgr: MemoryManager, shedueler: Sheduler|None = None):
+    def __init__(self, screen,rout_msg:FunctionType):
         self.screen: pygame.Surface = screen
         self.mr: MimirRender = MimirRender(screen)
         self.mr.set_up_all_FPS()
@@ -17,10 +19,10 @@ class TextUserInterface:
 
         self.lock = 0
         self.waiting_queue = []
-        self.shedueler : Sheduler|None = shedueler
+        
+        self.route_msg : FunctionType = rout_msg
+        self.msg_queue: list[Message] = []
 
-        self.gst_offset = 300
-        self.memory_mgr: MemoryManager = memory_mgr
 
         self.height = self.mr.get_height() // self.font.render("ABC", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
         self.width = self.mr.get_width() // (self.font.render("ABCDE", True, self.text_color).get_width()//5)   # Calculate how many characters can fit on a line
@@ -42,8 +44,14 @@ class TextUserInterface:
         self.logger.log(0,"TUI init successful.")
         self.logger.log(0,f"TUI DATA:\nHeight:{self.height}\nWidth:{self.width}\nInput?:{self.input_aktive}")      
 
-    def set_shedueler(self, shedueler: Sheduler):
-        self.shedueler = shedueler
+        reg_msg = Message()
+        reg_msg.set_header(Module.TUI,Module.IPC, False)
+        reg_msg.set_body({
+            "action": "register",
+            "module": Module.TUI,
+            "queue": self.msg_queue
+            })
+        self.route_msg(reg_msg)
 
     def draw_text(self, text, position):
         self.mr.create_Text(position[0], position[1], text, 24, self.text_color)
@@ -178,7 +186,7 @@ class TextUserInterface:
             self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
             return SyscallReturn(SyscallReturnType.Wait, 321)
 
-    def show_input(self,pid,_) -> SyscallReturn | None:
+    def show_input(self,pid,_) -> None:
         if self.lock == pid:
             self.do_show_input = True
             return SyscallReturn(SyscallReturnType.Succes, 0)
@@ -190,8 +198,6 @@ class TextUserInterface:
 
     def set_up_syscalls(self):
         pass
-        def write(self,syscall_id,func):
-            self.memory_mgr.write("syscall_mgr",self.memory_mgr.gst_ptr + syscall_id,func)
         
         write(self,301,self.require_tui)
         write(self,302, self.unlock_tui)

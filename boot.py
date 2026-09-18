@@ -1,6 +1,6 @@
 import argparse
 import pygame
-import kernel
+from Kernel.kernel import Kernel,Resolutions,KernelMode
 
 
 def parse_args():
@@ -42,22 +42,22 @@ def parse_args():
 
 args = parse_args()
 
-resolution = kernel.Resolutions.R_360P.value
+resolution = Resolutions.R_360P.value
 
 # Auflösung auswählen
 match args.resolution:
     case "4k":
-        resolution = kernel.Resolutions.R_4K.value
+        resolution = Resolutions.R_4K.value
     case "2k":
-        resolution = kernel.Resolutions.R_1440P.value
+        resolution = Resolutions.R_1440P.value
     case "1080p":
-        resolution = kernel.Resolutions.R_1080P.value
+        resolution = Resolutions.R_1080P.value
     case "720p":
-        resolution = kernel.Resolutions.R_720P.value
+        resolution = Resolutions.R_720P.value
     case "480p":
-        resolution = kernel.Resolutions.R_480P.value
+        resolution = Resolutions.R_480P.value
     case "360p":
-        resolution = kernel.Resolutions.R_360P.value
+        resolution = Resolutions.R_360P.value
 
 
 # Fullscreen ist Standard
@@ -71,12 +71,12 @@ screen = pygame.display.set_mode(
     pygame.FULLSCREEN if fullscreen else 0
 )
 
-km = kernel.KernelMode()
+km = KernelMode()
 
 km.Debug_Mode = args.debug
 km.Recovery_Mode = args.recovery
 
-live_kernel = kernel.Kernel(
+live_kernel = Kernel(
     screen,
     kernelmode= km
 )

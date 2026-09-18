@@ -5,6 +5,8 @@ class Module(Enum):
     KERNEL = "kernel"
     MEMORY = "memory"
     IPC = "ipc"
+    SYSCALLMANAGER = "syscallmgr"
+    TUI = "tui"
     NONE = ""
 
 
