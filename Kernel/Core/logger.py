@@ -1,3 +1,4 @@
+from ..IPC.common import Module
 
 class Log:
     def __init__(self,level:int,module:str,message:str) -> None:
@@ -11,7 +12,7 @@ class Log:
         return f"[{self.level}] {self.module}: {self.message}"
 
 class Logger:
-    def __init__(self,module:str="Kernel") -> None:
+    def __init__(self,module:Module = Module.KERNEL) -> None:
         if not isinstance(module,str):
             raise TypeError("Invalid argument types")
         self.module = module

@@ -1,6 +1,4 @@
-from .common import Message,Module
-
-from ..Core.erros import Return, ErrorType, IPCErrorCode, Error
+from ..common import *
 
 class InterProcessCommunication:
     def __init__(self):
@@ -37,8 +35,8 @@ class InterProcessCommunication:
                     continue
     def header_validation(self, msg:Message) -> Return:
         if msg._from == msg.to:
-            return Return(False,Error(ErrorType.IPCError,IPCErrorCode.InvalideMSGHeader,"You can´t send Messages to your self!"))
+            return Return(False,Error(ErrorType.IPCError,IPCErrorCode.InvalidMSGHeader,"You can't send Messages to your self!"))
         elif msg.to == Module.NONE or msg._from == Module.NONE:
-            return Return(False,Error(ErrorType.IPCError,IPCErrorCode.InvalideMSGHeader,"You can´t send Messages with no set Sender or Reciever!"))
+            return Return(False,Error(ErrorType.IPCError,IPCErrorCode.InvalidMSGHeader,"You can't send Messages with no set Sender or Receiver!"))
         return Return(True)
         

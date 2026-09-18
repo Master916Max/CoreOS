@@ -32,8 +32,12 @@ class PermissionErrorCode(ErrorCode):
 
 class IPCErrorCode(ErrorCode):
     ModuleNotRegistered = 0
-    InvalideMSGBody = 1
-    InvalideMSGHeader = 2
+    InvalidMSGBody = 1
+    InvalidMSGHeader = 2
+
+class BootError(ErrorCode):
+    UIInitializationFailed = 1
+    pass
 
 class Error:
     def __init__(self,error_type:ErrorType,error_code:ErrorCode,message:str) -> None:

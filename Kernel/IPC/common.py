@@ -1,5 +1,8 @@
 from uuid import uuid4
 from enum import Enum
+from typing import Callable
+
+type RouteFNCType = Callable[[Message], None]
 
 class Module(Enum):
     KERNEL = "kernel"
@@ -8,8 +11,6 @@ class Module(Enum):
     SYSCALLMANAGER = "syscallmgr"
     TUI = "tui"
     NONE = ""
-
-
 
 class Message:
     def __init__(self):
@@ -42,3 +43,6 @@ class Message:
         _msg.set_body(content)
         _msg.msg_id = self.msg_id
         return _msg
+
+class IPC_State:
+    ipc: # IPC Classe hier gebraucht (FOR AI)
