@@ -1,6 +1,5 @@
 from .GUI.MimirRender import MimirRender
 import pygame
-from time import sleep
 
 class QaDBIO:
     def __init__(self, screen):
@@ -56,8 +55,6 @@ class QaDBIO:
                     self.print_txt_QaDBIO("Testing System...")
                 case 8:
                     self.print_txt_QaDBIO("Handing Graphics Control to the Graphics Subsystem and Starting the Init Process...")
-            
-            sleep(0.1)
 
     def print_txt_QaDBIO(self,text) -> None:
             self.mr.create_Text(0,self.line*self.line_height,text,24,(255,255,255)) 
