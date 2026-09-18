@@ -1,5 +1,3 @@
-from Kernel.UI.main import UI_Stat
-
 from .IPC.common import *
 from .Core.erros import *
 from .UI.common import UI_Stat
@@ -14,4 +12,7 @@ class KernelState:
     boot_cfg: BootConfig
     route_msg: RouteFNCType
     UI_Stat : UI_Stat
-    error: list[Error]
+    IPC_State: IPC_State
+    error: list[Error]  = []
+    running: bool       = False
+    crash: bool         = False

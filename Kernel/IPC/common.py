@@ -1,9 +1,9 @@
 from uuid import uuid4
 from enum import Enum
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 
-type RouteFNCType = Callable[[Message], None]
-
+if TYPE_CHECKING: from .ipc import InterProcessCommunication
+if TYPE_CHECKING: from ..Core.erros import Return
 class Module(Enum):
     KERNEL = "kernel"
     MEMORY = "memory"
@@ -44,5 +44,7 @@ class Message:
         _msg.msg_id = self.msg_id
         return _msg
 
+type RouteFNCType = Callable[[Message], Return]
 class IPC_State:
-    ipc: # IPC Classe hier gebraucht (FOR AI)
+    ipc: InterProcessCommunication
+    errors: list

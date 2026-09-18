@@ -1,21 +1,40 @@
 from .UI.main import load_q,load_f, loop, shutdown
+from .IPC.main import load as ipc_load
+from .IPC.main import loop as ipc_loop
+from .IPC.main import shutdown as ipc_shutdown
 from .common import *
 
 
 
 class Kernel:
-    def __init__(self):
+    def __init__(self) -> None:
         self.version = "0.2.0"
+        self.state = KernelState()
 
-    def load(self,BootConf: BootConfig):
+    def load(self,BootConf: BootConfig) -> None:
+        self.state.boot_cfg = BootConf
+        ret = ipc_load(BootConf)
+        if ret.error == None:
+            self.state.IPC_State = ret.value
+            self.state.route_msg = self.state.IPC_State.ipc.route_msg
+        else: self.panic()
+
+        ret = load_q(BootConf, self.state.route_msg)
+        if ret.error == None:
+                    self.state.UI_Stat = ret.value
+        else: self.panic()
+
+    def run(self) -> None:
+        self.state.running = True
+        while self.state.running:
+            ret = ipc_loop(self.state)
+            if ret.error != None:
+                 self.panic()
+            pass
+
+    def shutdown(self) -> None:
         pass
 
-    def run(self):
-        pass
-
-    def shutdown(self):
-        pass
-
-    def panic(self):
+    def panic(self) -> None:
         pass
         

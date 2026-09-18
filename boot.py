@@ -1,6 +1,8 @@
 import argparse
 import pygame
-from Kernel.kernel import Kernel,Resolutions,KernelMode
+from Kernel.kernel import Resolutions
+
+from Kernel.main import Kernel, BootConfig
 
 
 def parse_args():
@@ -20,6 +22,7 @@ def parse_args():
     # Fenster / Fullscreen
     parser.add_argument(
         "--window",
+        "-w",
         action="store_true",
         help="Start MOS in windowed mode"
     )
@@ -71,14 +74,13 @@ screen = pygame.display.set_mode(
     pygame.FULLSCREEN if fullscreen else 0
 )
 
-km = KernelMode()
+boot_cfg = BootConfig()
 
-km.Debug_Mode = args.debug
-km.Recovery_Mode = args.recovery
+boot_cfg.screen = screen
 
-live_kernel = Kernel(
-    screen,
-    kernelmode= km
-)
+live_kernel = Kernel()
+
+live_kernel.load(boot_cfg)
+live_kernel.run()
 
 pygame.quit()

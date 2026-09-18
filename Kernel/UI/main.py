@@ -1,7 +1,7 @@
 from ..common import *
-import gui
-import qadbio
-import tui
+from .gui import GUI
+from .qadbio import QaDBIO
+from .tui import TextUserInterface
 
 
 
@@ -9,9 +9,9 @@ def load_q(bootcfg: BootConfig, route_msg: RouteFNCType) -> Return:
     state = UI_Stat()
 
     if bootcfg.UI != None:
-        state.qadbio = qadbio.QaDBIO(bootcfg.screen)
+        state.qadbio = QaDBIO(bootcfg.screen)
 
-    return Return(True)
+    return Return(state)
 
 
 def load_f(kernelState: KernelState) -> Return:
@@ -19,7 +19,7 @@ def load_f(kernelState: KernelState) -> Return:
 
     match kernelState.boot_cfg.UI:
         case"TUI":
-            state.tui = tui.TextUserInterface(kernelState.boot_cfg.screen,kernelState.route_msg)
+            state.tui = TextUserInterface(kernelState.boot_cfg.screen,kernelState.route_msg)
             return Return(True)
         case"GUI":
             raise NotImplementedError
