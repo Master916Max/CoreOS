@@ -1,6 +1,6 @@
 from .IPC.common import *
 from .Core.erros import *
-from .UI.common import UI_Stat
+from .UI.common import UI_Stat, BootState
 from .Core.logger import Log, Logger
 
 

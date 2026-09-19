@@ -2,7 +2,21 @@
 # Needs Export
 #
 
-syscall(141, "stfn.lib")
+def require_tui():syscall(301)
+
+def unlock_tui():syscall(302)
+
+def print(text):syscall(303,text)
+
+def printl(text):syscall(304,text)
+
+def read_c() -> str:
+    return syscall(321)
+
+def read_l() -> str:
+    return syscall(322)
+
+def sleep(ms): syscall(909, ms)
 
 pid = ret # pyright: ignore[reportUndefinedVariable]
 
@@ -34,4 +48,3 @@ syscall(332) # pyright: ignore[reportUndefinedVariable]
 
 unlock_tui()
 syscall(400) # pyright: ignore[reportUndefinedVariable]
-#4i  82ujkJHKGFGJHGJHGJHG
