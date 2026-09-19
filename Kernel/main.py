@@ -1,9 +1,11 @@
+# UI Functions
 from .UI.main import  shutdown
 from .UI.main import load_q as ui_load_q
 from .UI.main import load_f as ui_load_f
 from .UI.main import loop as ui_loop_f
 from .UI.main import shutdown as ui_shutdown
 from .UI.main import updateBootStateUI
+# IPC Funtions
 from .IPC.main import load as ipc_load
 from .IPC.main import loop as ipc_loop
 from .IPC.main import shutdown as ipc_shutdown
@@ -44,10 +46,12 @@ class Kernel:
                  self.panic()
             pass
             updateBootStateUI(self.state.UI_Stat,self.bootstate)
+            self.panic()
 
     def shutdown(self) -> None:
         pass
 
     def panic(self) -> None:
+        exit(120000)
         pass
         

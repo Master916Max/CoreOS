@@ -1,5 +1,7 @@
 from enum import IntFlag
 
+from ..IPC.common import RouteFNCType
+
 
 class PermissionPreset(IntFlag):
     """The permissions supported by the core permission system."""
@@ -72,3 +74,7 @@ class Policy:
     def remove(self, subject):
         self._permissions.pop(subject, None)
         return self
+
+class PermissionManager:
+    def __init__(self, route_msg:RouteFNCType) -> None:
+        pass

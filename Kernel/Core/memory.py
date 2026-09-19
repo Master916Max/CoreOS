@@ -1,14 +1,8 @@
-from types import FunctionType
-from typing import Any
-
-from ..IPC.common import Message, Module
-from .erros import IPCErrorCode, MemoryErrorCode, ErrorType, Error,Return
-
-from .logger import Logger
+from ..common import *
 
 
 class Cell:
-    def __init__(self, owner,content:Any):
+    def __init__(self, owner,content:object):
         self.owner = owner
         self.content = content
     def __rpr__(self):
@@ -17,7 +11,7 @@ class Cell:
         return self.__rpr__()
 
 class MemoryManager:
-    def __init__(self, rout_msg: FunctionType) -> None:
+    def __init__(self, rout_msg: RouteFNCType) -> None:
         self.logger = Logger()
 
         self.memory = [

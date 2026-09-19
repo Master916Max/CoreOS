@@ -77,6 +77,7 @@ screen = pygame.display.set_mode(
 boot_cfg = BootConfig()
 
 boot_cfg.screen = screen
+boot_cfg.UI = "TUI"
 
 live_kernel = Kernel()
 

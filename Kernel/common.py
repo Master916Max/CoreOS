@@ -1,12 +1,12 @@
 from .IPC.common import *
-from .Core.erros import *
+from .Core.common import *
 from .UI.common import UIState, BootState
-from .Core.logger import Log, Logger
 
 
 class BootConfig:
     UI: str|None = None
     screen: object
+    debugger_enabled: bool = False
 
 class KernelState:
     boot_cfg: BootConfig

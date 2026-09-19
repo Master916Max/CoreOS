@@ -1,10 +1,10 @@
 import socket
 from threading import Thread
 
-
+from ..IPC.common import RouteFNCType, Message,Module
 class Debugger:
-    def __init__(self, kernel, ip="127.0.0.1", port=16748):
-        self.kernel = kernel
+    def __init__(self, route_msg:RouteFNCType, ip="127.0.0.1", port=16748):
+        self.route_msg = route_msg
         self.ip = ip
         self.port = port
 
@@ -121,11 +121,11 @@ class Debugger:
         return f"Unknown command: {command}\n"
 
     def cmd_get_logs(self, args):
-        self.kernel.get_all_logs()
+        #self.kernel.get_all_logs()
 
-        logs = self.kernel.logs
+        #logs = self.kernel.logs
 
-        return str(logs) + "\n"
+        return str("logs") + "\n"
 
     def cmd_help(self, args):
         return (

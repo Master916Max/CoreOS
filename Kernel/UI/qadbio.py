@@ -6,6 +6,7 @@ class QaDBIO:
     def __init__(self, screen):
         self.mr = MimirRender(screen)
         self.mr.background_color = self.mr.get_color(0,5,0)
+        self.mr.set_up_all_FPS()
 
     def show(self, bootstate:BootState) -> None:
         """
@@ -32,22 +33,22 @@ class QaDBIO:
         self.line_height = 40
 
         if bootstate.ipc_loaded:
-             self.print_txt_QaDBIO("[KERNEL] -> LOADING IPC Module [✓]")
+             self.print_txt_QaDBIO("[KERNEL] -> LOADING IPC Module [OK]")
         else:
              self.print_txt_QaDBIO("[KERNEL] -> LOADING IPC Module")
 
         if bootstate.core_loaded:
-             self.print_txt_QaDBIO("[KERNEL] -> LOADING Core Module [✓]")
+             self.print_txt_QaDBIO("[KERNEL] -> LOADING Core Module [OK]]")
         else:
              self.print_txt_QaDBIO("[KERNEL] -> LOADING Core Module")
 
         if bootstate.process_loaded:
-             self.print_txt_QaDBIO("[KERNEL] -> LOADING Process Module [✓]")
+             self.print_txt_QaDBIO("[KERNEL] -> LOADING Process Module [OK]")
         else:
              self.print_txt_QaDBIO("[KERNEL] -> LOADING Process Module")
 
         if bootstate.ui_loaded:
-             self.print_txt_QaDBIO("[KERNEL] -> LOADING UI Module [✓]")
+             self.print_txt_QaDBIO("[KERNEL] -> LOADING UI Module [OK]")
         else:
              self.print_txt_QaDBIO("[KERNEL] -> LOADING UI Module")
 
@@ -59,4 +60,5 @@ class QaDBIO:
 
     def update(self)-> None:
             self.mr.render()
+            self.mr.render_fps()
             pygame.display.flip()
