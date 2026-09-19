@@ -4,10 +4,10 @@ if TYPE_CHECKING:from .gui import GUI
 if TYPE_CHECKING:from .qadbio import QaDBIO
 if TYPE_CHECKING:from .tui import TextUserInterface
 
-class UI_Stat:
-    gui: GUI
-    tui: TextUserInterface
-    qadbio: QaDBIO
+class UIState:
+    gui: GUI= None
+    tui: TextUserInterface= None
+    qadbio: QaDBIO = None
     errors = []
     latest_error = None
 

@@ -3,7 +3,7 @@ import pygame
 from .GUI.MimirRender import MimirRender
 from .GUI.desktop import Desktop
 from .GUI._layer_s import Layer, LayerManager
-
+from ..common import *
 
 class Window:
     def __init__(self, title, owner, size:tuple):
@@ -56,10 +56,7 @@ class GUI:
 
     def log(self, message):
         pass
-
-    def set_shedueler(self, shedueler: Sheduler):
-            self.shedueler = shedueler
-
+    
     def update(self):
         if self.need_update:
             pass

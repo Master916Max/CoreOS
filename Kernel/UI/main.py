@@ -6,13 +6,18 @@ from .tui import TextUserInterface
 
 
 def load_q(bootcfg: BootConfig, route_msg: RouteFNCType) -> Return:
-    state = UI_Stat()
+    state = UIState()
 
     if bootcfg.UI != None:
         state.qadbio = QaDBIO(bootcfg.screen)
 
     return Return(state)
 
+def updateBootStateUI(UIState: UIState,bootstate: BootState) -> Return:
+    if UIState.qadbio:
+        UIState.qadbio.show(bootstate)
+        UIState.qadbio.update()
+    return Return(True)
 
 def load_f(kernelState: KernelState) -> Return:
     state = kernelState.UI_Stat

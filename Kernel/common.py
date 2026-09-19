@@ -1,6 +1,6 @@
 from .IPC.common import *
 from .Core.erros import *
-from .UI.common import UI_Stat, BootState
+from .UI.common import UIState, BootState
 from .Core.logger import Log, Logger
 
 
@@ -11,7 +11,7 @@ class BootConfig:
 class KernelState:
     boot_cfg: BootConfig
     route_msg: RouteFNCType
-    UI_Stat : UI_Stat
+    UI_Stat : UIState
     IPC_State: IPC_State
     error: list[Error]  = []
     running: bool       = False
