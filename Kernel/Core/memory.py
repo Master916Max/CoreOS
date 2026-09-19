@@ -74,6 +74,8 @@ class MemoryManager:
         if size <= 0:
             return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Size can't be 0 long!"))
 
+        if owner == None:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"The Owner can't be none!"))
         # Find a free block large enough
         for index, (start, block_size) in enumerate(self.empty_pointers):
             if block_size < size:
@@ -115,6 +117,8 @@ class MemoryManager:
         if pointer + size > self.memory_size:
             return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Memory range is out of bounds"))
 
+        if owner == None:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"The Owner can't be none!"))
         # -------------------------------------------------
         # Verify ownership BEFORE changing anything
         # -------------------------------------------------
@@ -184,6 +188,10 @@ class MemoryManager:
         self.empty_pointers = merged
 
     def read(self, owner, pointer) -> Return:
+
+        if owner == None:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"The Owner can't be none!"))
+        
         self.logger.log(0,f"Owner:{owner} read: {pointer}")
 
         if pointer < 0 or pointer >= self.memory_size:
@@ -196,6 +204,9 @@ class MemoryManager:
 
     def write(self, owner, pointer, data) -> Return:
         self.logger.log(0,f"Owner:{owner} wrote: {pointer} at: {data}")
+
+        if owner == None:
+            return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"The Owner can't be none!"))
 
         if pointer < 0 or pointer >= self.memory_size:
             return Return(False,Error(ErrorType.MemoryError,MemoryErrorCode.InvalidMemorySize,"Invalid memory pointer"))
@@ -249,7 +260,7 @@ class MemoryManager:
                     {
                         "action":"return",
                         "error" : ErrorType.IPCError,
-                        "code"  : IPCErrorCode.InvalideMSGBody
+                        "code"  : IPCErrorCode.InvalidMSGBody
                     }
                 )
 
