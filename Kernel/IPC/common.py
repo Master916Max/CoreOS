@@ -1,3 +1,4 @@
+from __future__ import annotations
 from uuid import uuid4
 from enum import Enum
 from typing import Callable, TYPE_CHECKING
