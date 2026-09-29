@@ -1,3 +1,4 @@
+import time
 # UI Functions
 from .UI.main import  shutdown
 from .UI.main import load_q as ui_load_q
@@ -41,6 +42,7 @@ class Kernel:
         else:
             self.panic()
         updateBootStateUI(self.state.UI_Stat,self.bootstate)
+        time.sleep(10)
 
 
 
