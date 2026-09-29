@@ -19,22 +19,21 @@ def updateBootStateUI(UIState: UIState,bootstate: BootState) -> Return:
         UIState.qadbio.update()
     return Return(True)
 
-def load_f(kernelState: KernelState) -> Return:
-    state = kernelState.UI_Stat
+def load_f(Bootcfg: BootConfig, state, route_msg:RouteFNCType) -> Return:
 
-    match kernelState.boot_cfg.UI:
+    match Bootcfg.UI:
         case"TUI":
-            state.tui = TextUserInterface(kernelState.boot_cfg.screen,kernelState.route_msg)
-            return Return(True)
+            state.tui = TextUserInterface(Bootcfg.screen,route_msg)
+            return Return(state)
         case"GUI":
             raise NotImplementedError
             #state.gui = gui.GUI(kernelState.boot_cfg.screen,route_msg)
         case _:
-            return Return(True)
+            return Return(state)
 
-def loop(kernelState: KernelState) -> Return:
+def loop(state: UIState) -> Return:
 
-    return Return(True)
+    return Return(state)
 
 def shutdown(kernelState: KernelState) -> Logger:
 

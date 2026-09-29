@@ -1,12 +1,10 @@
-from subsystems.memory import MemoryManager
-from subsystems.common import SyscallReturnType
-from subsystems.common import SyscallReturn
+from ..Core.common import *
+from ..IPC.common import RouteFNCType,Message,Module
 from types import MethodType
 import time
 import random
 
 from .procees_multi import Process
-from .logging import Logger
 
 class Sheduler:
     def __init__(self, get_process: MethodType, run_process: MethodType):
@@ -38,7 +36,7 @@ class Sheduler:
 
         if len(self.ready_queue) != 0:
             pid_to_run = self.ready_queue[0]
-            #self.logger.log(1,"Running Pid:" + str(pid_to_run))
+            self.logger.log(0,"Running Pid:" + str(pid_to_run))
             if pid_to_run and not pid_to_run == 0:
                 if self.run_process(pid_to_run) == "finished":
                     self.remove_pid(pid_to_run)

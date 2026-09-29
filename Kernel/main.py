@@ -34,7 +34,13 @@ class Kernel:
             self.state.UI_Stat = ret.value
         else: self.panic()
         updateBootStateUI(self.state.UI_Stat,self.bootstate)
-        
+
+        ret = ui_load_f(BootConf, self.state.UI_Stat, self.state.route_msg)
+        if ret.error == None:
+            self.state.UI_Stat = ret.value
+        else:
+            self.panic()
+        updateBootStateUI(self.state.UI_Stat,self.bootstate)
 
 
 
@@ -45,8 +51,8 @@ class Kernel:
             if ret.error != None:
                  self.panic()
             pass
-            updateBootStateUI(self.state.UI_Stat,self.bootstate)
-            self.panic()
+            ui_loop_f(self.state.UI_Stat)
+            
 
     def shutdown(self) -> None:
         pass

@@ -2,7 +2,6 @@ from typing import Any
 from dataclasses import dataclass
 import pygame
 
-
 @dataclass
 class RenderObj:
     type: str
@@ -57,6 +56,8 @@ class MimirRender:
     # --- Render ---
 
     def render(self):
+        """Draws the Created Szene on to te Screen
+        """
         self.screen.fill(self.background_color)
 
         if self._dirty:
@@ -77,6 +78,8 @@ class MimirRender:
                         font = self._get_font(obj.font_size)
                         self._text_cache[z] = font.render(obj.text, True, obj.color)
                     self.screen.blit(self._text_cache[z], (obj.x, obj.y))
+                case "line":
+                    pygame.draw.line(self.screen,obj.color,obj.pos1,obj.pos2,obj.width)
 
         if self.need_tick:
             if self.cap:
@@ -113,6 +116,11 @@ class MimirRender:
         for i, line in enumerate(lines):
             surface = self.fps_font.render(line, True, (255, 255, 255))
             self.screen.blit(surface, (self.get_width() - surface.get_width(), i * line_height))
+        if self.need_tick:
+            if self.cap:
+                self.clock.tick(self.fps)
+            else:
+                self.clock.tick()
 
     def calc_fps(self):
             current = self.clock.get_fps()
@@ -164,17 +172,20 @@ class MimirRender:
 
     # --- Create ---
 
-    def create_Rect(self, x, y, width, height, color) -> int:
+    def create_Rect(self, x:int, y:int, width, height, color) -> int:
         return self._add_obj(RenderObj("rect", x=x, y=y, width=width, height=height, color=color))
 
-    def create_Circle(self, x, y, radius, color) -> int:
+    def create_Circle(self, x:int, y:int, radius, color) -> int:
         return self._add_obj(RenderObj("circle", x=x, y=y, width=radius, color=color))
 
     def create_Triangle(self, pos1, pos2, pos3, color) -> int:
         return self._add_obj(RenderObj("triangle", pos1=pos1, pos2=pos2, pos3=pos3, color=color))
 
-    def create_Text(self, x, y, text, font_size, color) -> int:
+    def create_Text(self, x:int, y:int, text, font_size, color) -> int:
         return self._add_obj(RenderObj("text", x=x, y=y, text=text, font_size=font_size, color=color))
+
+    def create_Line(self,pos1:tuple, pos2:tuple, width, color) -> int:
+        return self._add_obj(RenderObj("line", pos1=pos1,pos2=pos2,width=width,color=color))
 
     # --- Utils ---
 
@@ -235,6 +246,8 @@ class MimirRender:
 
 
 class Animation:
+    """ Class for Automated Tranisionts between to states
+    """
     def __init__(self, renderer: MimirRender, z_indexes: list[int], prop: str, goals: list[float], frames: int, on_done=None):
         """
         renderer  : MimirRender instance

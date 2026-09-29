@@ -3,15 +3,6 @@ from typing import Any
 from .logging import Logger
 from .memory import MemoryManager
 
-class NoneRegisteredSyscallException(Exception):
-    pass
-
-class SyscallErrorException(Exception):
-    pass
-
-class SyscallAllreadyRegisteredException(Exception):
-    pass
-
 class Syscall:
     def __init__(self, syscall_id: int, function: FunctionType):
         self.syscall_id = syscall_id
