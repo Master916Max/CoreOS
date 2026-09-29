@@ -33,6 +33,8 @@ def load_f(Bootcfg: BootConfig, state, route_msg:RouteFNCType) -> Return:
 
 def loop(state: UIState) -> Return:
 
+    if state.tui:
+        state.tui.handle_event()
     return Return(state)
 
 def shutdown(kernelState: KernelState) -> Logger:

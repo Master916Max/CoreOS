@@ -111,14 +111,12 @@ class TextUserInterface:
                     elif event.key == pygame.K_RETURN:
                         self.input_aktive = False
                         if self.input_mode == "line":
-                            self.shedueler.get_process(self.lock).ui_input = self.input_buffer # pyright: ignore[reportOptionalMemberAccess]
-                            self.shedueler.unblock_process(self.lock) # pyright: ignore[reportOptionalMemberAccess]
+                            pass
                     else:
                         self.input_buffer += event.unicode
                     if self.input_mode == "char":
                         print(self.input_buffer)
-                        self.shedueler.get_process(self.lock).ui_input = self.input_buffer # pyright: ignore[reportOptionalMemberAccess]
-                        self.shedueler.unblock_process(self.lock) # pyright: ignore[reportOptionalMemberAccess]
+                        pass
 
             else:
                 continue
@@ -133,81 +131,79 @@ class TextUserInterface:
 
     # Syscalls
 
-    def require_tui(self, pid,args):
-        if self.lock == 0:
-            self.lock = pid
-            return SyscallReturn(SyscallReturnType.Succes, 0)
-        else:
-            self.waiting_queue.append(pid)
-            self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
-            return SyscallReturn(SyscallReturnType.Wait,0)
-
-    def unlock_tui(self, pid,args):
-        if self.lock == pid:
-            self.lock = 0
-            return SyscallReturn(SyscallReturnType.Succes, 0)
-        else:
-            return SyscallReturn(SyscallReturnType.Error,-3)
-    
-    def update_waiting_queue(self):
-        if self.lock == 0 and len(self.waiting_queue) > 0:
-            next_pid = self.waiting_queue[0]
-            if self.require_tui(next_pid).type == SyscallReturnType.Succes: # pyright: ignore[reportCallIssue]
-                self.waiting_queue.remove(next_pid)
-                self.shedueler.unblock_process(next_pid) # pyright: ignore[reportOptionalMemberAccess]
-                                                
-    def print(self,pid, text):
-        if pid == self.lock:
-            self.print_line(text)
-            self.handle_event()
-            return SyscallReturn(SyscallReturnType.Succes, 1)
-
-    def print_c(self,pid, text):
-            if pid == self.lock:
-                self.print_char(text)
-                self.handle_event()
-                return SyscallReturn(SyscallReturnType.Succes, 1)
-
-    def read_char(self,pid, _):
-        if pid == self.lock:
-            if self.input_aktive: return SyscallReturn(SyscallReturnType.Error, "")
-            self.input_aktive = True
-            self.input_mode = "char"
-            self.input_buffer = ""
-            self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
-            return SyscallReturn(SyscallReturnType.Wait, 321)
-
-    def read_line(self,pid, _):
-        if pid == self.lock:
-            if self.input_aktive: return SyscallReturn(SyscallReturnType.Error, "")
-            self.input_aktive = True
-            self.input_mode = "line"
-            self.input_buffer = ""
-            self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
-            return SyscallReturn(SyscallReturnType.Wait, 321)
-
-    def show_input(self,pid,_) -> None:
-        if self.lock == pid:
-            self.do_show_input = True
-            return SyscallReturn(SyscallReturnType.Succes, 0)
-
-    def hide_input(self,pid,_) -> SyscallReturn | None:
-            if self.lock == pid:
-                self.do_show_input = False
-                return SyscallReturn(SyscallReturnType.Succes, 0)
-
-    def set_up_syscalls(self):
-        pass
-        
-        write(self,301,self.require_tui)
-        write(self,302, self.unlock_tui)
-        write(self,303,self.print_c)
-        write(self,304,self.print)
-        write(self,321,self.read_char)
-        write(self,322,self.read_line)
-        write(self,331,self.show_input)
-        write(self,332,self.hide_input)
-    
+#    def require_tui(self, pid,args):
+#        if self.lock == 0:
+#            self.lock = pid
+#            return
+#        else:
+#            self.waiting_queue.append(pid)
+#            return
+#
+#    def unlock_tui(self, pid,args):
+#        if self.lock == pid:
+#            self.lock = 0
+#            return 
+#        else:
+#            return 
+#    
+#    def update_waiting_queue(self):
+#        if self.lock == 0 and len(self.waiting_queue) > 0:
+#            next_pid = self.waiting_queue[0]
+#            if self.require_tui(next_pid).type == 0:
+#                self.waiting_queue.remove(next_pid)
+#                                                
+#    def print(self,pid, text):
+#        if pid == self.lock:
+#            self.print_line(text)
+#            self.handle_event()
+#            return SyscallReturn(SyscallReturnType.Succes, 1)
+#
+#    def print_c(self,pid, text):
+#            if pid == self.lock:
+#                self.print_char(text)
+#                self.handle_event()
+#                return SyscallReturn(SyscallReturnType.Succes, 1)
+#
+#    def read_char(self,pid, _):
+#        if pid == self.lock:
+#            if self.input_aktive: return SyscallReturn(SyscallReturnType.Error, "")
+#            self.input_aktive = True
+#            self.input_mode = "char"
+#            self.input_buffer = ""
+#            self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
+#            return SyscallReturn(SyscallReturnType.Wait, 321)
+#
+#    def read_line(self,pid, _):
+#        if pid == self.lock:
+#            if self.input_aktive: return SyscallReturn(SyscallReturnType.Error, "")
+#            self.input_aktive = True
+#            self.input_mode = "line"
+#            self.input_buffer = ""
+#            self.shedueler.block_process(pid) # pyright: ignore[reportOptionalMemberAccess]
+#            return SyscallReturn(SyscallReturnType.Wait, 321)
+#
+#    def show_input(self,pid,_) -> None:
+#        if self.lock == pid:
+#            self.do_show_input = True
+#            return SyscallReturn(SyscallReturnType.Succes, 0)
+#
+#    def hide_input(self,pid,_) -> SyscallReturn | None:
+#            if self.lock == pid:
+#                self.do_show_input = False
+#                return SyscallReturn(SyscallReturnType.Succes, 0)
+#
+#    def set_up_syscalls(self):
+#        pass
+#        
+#        write(self,301,self.require_tui)
+#        write(self,302, self.unlock_tui)
+#        write(self,303,self.print_c)
+#        write(self,304,self.print)
+#        write(self,321,self.read_char)
+#        write(self,322,self.read_line)
+#        write(self,331,self.show_input)
+#        write(self,332,self.hide_input)
+#    
     def shutdown(self):
         self.clear()
         self.set_bg(self.mr.get_color(0,0,32))
