@@ -60,4 +60,4 @@ CoreOS is currently under active development and should be considered experiment
 
 ## License
 
-This project is currently not licensed. All rights reserved unless stated otherwise.
+CoreOS is licensed under the MIT License.
