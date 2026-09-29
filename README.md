@@ -687,22 +687,7 @@ This README describes the project and the current architecture at a high level; 
 
 # License
 
-CoreOS is currently being developed under a custom licensing model.
-
-The intended license is designed to allow people to:
-
-- Use the official CoreOS code privately
-- Modify the code for private use
-- Create fixes and improvements
-- Contribute improvements back to the official project
-- Build separate extensions or applications on top of CoreOS
-- Commercially distribute independent extensions or applications
-
-At the same time, redistribution of the original CoreOS source as a new independent project is intended to remain restricted.
-
-The final license text will define these permissions and restrictions precisely.
-
-Until the final license is published, the repository should not be assumed to grant permissions beyond those explicitly stated by the project owner.
+CoreOS is licensed under the MIT License.
 
 ---
 
