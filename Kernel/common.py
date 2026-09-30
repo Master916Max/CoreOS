@@ -12,7 +12,9 @@ class KernelState:
     boot_cfg: BootConfig
     route_msg: RouteFNCType
     UI_Stat : UIState
+    Core_State: CoreState
     IPC_State: IPC_State
+    logger: Logger
     error: list[Error]  = []
     running: bool       = False
     crash: bool         = False

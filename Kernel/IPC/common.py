@@ -31,7 +31,7 @@ class Message:
 
     def get_header(self):
         return {
-            "_from": self._from,
+            "from": self._from,
             "to": self.to,
             "answer_required": self.answer_required
         }

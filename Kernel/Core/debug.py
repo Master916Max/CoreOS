@@ -1,6 +1,8 @@
 import socket
 from threading import Thread
 
+from .logger import Logger
+
 from ..IPC.common import RouteFNCType, Message,Module
 class Debugger:
     def __init__(self, route_msg:RouteFNCType, ip="127.0.0.1", port=16748):
@@ -47,11 +49,9 @@ class Debugger:
         while self.running:
             try:
                 connection, address = self.sock.accept()
-
                 print(
                     f"Debugger connected: {address}"
                 )
-
                 self.connections.append(connection)
 
                 Thread(
@@ -157,3 +157,7 @@ class Debugger:
             self.sock.close()
         except OSError:
             pass
+
+    def shutdown(self) -> Logger:
+        self.stop()
+        return Logger()

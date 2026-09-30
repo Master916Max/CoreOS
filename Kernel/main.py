@@ -1,4 +1,10 @@
+from ast import Mod
+from math import fabs
 import time
+# Core Functions
+from .Core.main import load as core_load
+from .Core.main import loop as core_loop
+from .Core.main import shutdown as core_shutdown
 # UI Functions
 from .UI.main import  shutdown
 from .UI.main import load_q as ui_load_q
@@ -10,14 +16,18 @@ from .UI.main import updateBootStateUI
 from .IPC.main import load as ipc_load
 from .IPC.main import loop as ipc_loop
 from .IPC.main import shutdown as ipc_shutdown
+
+# System Wide Defs
 from .common import *
 
 
 
 class Kernel:
     def __init__(self) -> None:
-        self.version = "0.0.0"
+        self.version = "0.0.1"
+        self.msg_queue: list[Message] = []
         self.state = KernelState()
+        self.state.logger = Logger(Module.KERNEL)
 
     def load(self,BootConf: BootConfig) -> None:
         self.bootstate = BootState()
@@ -34,6 +44,14 @@ class Kernel:
         ret = ui_load_q(BootConf, self.state.route_msg)
         if ret.error == None:
             self.state.UI_Stat = ret.value
+        else: self.panic()
+        updateBootStateUI(self.state.UI_Stat,self.bootstate)
+        time.sleep(0.01)
+
+        ret = core_load(BootConf, self.state.route_msg)
+        if ret.error == None:
+            self.state.Core_State = ret.value
+            self.bootstate.core_loaded = True
         else: self.panic()
         updateBootStateUI(self.state.UI_Stat,self.bootstate)
         time.sleep(0.01)
@@ -55,12 +73,47 @@ class Kernel:
             ret = ipc_loop(self.state)
             if ret.error != None:
                  self.panic()
-            pass
-            ui_loop_f(self.state.UI_Stat)
+            ret = ui_loop_f(self.state.UI_Stat)
+            if ret.error != None:
+                self.panic()
+            ret = core_loop(self.state.Core_State)
+            if ret.error != None:
+                self.panic()
+
             
+    def register_ipc(self) -> None:
+        reg_msg = Message()
+        reg_msg.set_header(Module.KERNEL,Module.IPC,False)
+        reg_msg.set_body({
+            "action": "register",
+            "module": Module.KERNEL,
+            "queue": self.msg_queue
+        })
+
+    def handle_msg(self) -> None:
+        for msg in self.msg_queue:
+            body = msg.get_body()
+            action = body.get("action", None)
+            sender = msg.get_header().get("from")
+            if action:
+                match action:
+                    case "shutdown":
+                        self.state.running = False
+                    case _:
+                        msg.answer({
+                            "action" : "return",
+                            "error" : "Unsupported Action"
+                        })
+
 
     def shutdown(self) -> None:
-        pass
+        self.state.logger += core_shutdown()
+        self.state.logger += ui_shutdown()
+        self.state.logger += ipc_shutdown()
+
+        print(self.state.logger.get_logs_s())
+            
+            
 
     def panic(self) -> None:
         exit(120000)

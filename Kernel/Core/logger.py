@@ -1,3 +1,7 @@
+from io import UnsupportedOperation
+
+from uuid import uuid4
+
 from ..IPC.common import Module
 
 class Log:
@@ -7,6 +11,7 @@ class Log:
         self.level = level
         self.module = module.value
         self.message = message
+        self.id = uuid4()
 
     def __str__(self):
         return f"[{self.level}] {self.module}: {self.message}"
@@ -30,3 +35,11 @@ class Logger:
         if not isinstance(level,int):
             raise TypeError("Invalid argument types")
         return "\n".join([str(log) for log in self.logs if log.level >= level])
+
+    def __add__(self, other: Logger):
+        if isinstance(other,Logger):
+            for log in other.logs:
+                self.logs.append(log)
+            return self
+        else:
+            raise UnsupportedOperation()
