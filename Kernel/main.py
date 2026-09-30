@@ -29,20 +29,23 @@ class Kernel:
             self.state.route_msg = self.state.IPC_State.ipc.route_msg
             self.bootstate.ipc_loaded = True
         else: self.panic()
+        time.sleep(0.01)
 
         ret = ui_load_q(BootConf, self.state.route_msg)
         if ret.error == None:
             self.state.UI_Stat = ret.value
         else: self.panic()
         updateBootStateUI(self.state.UI_Stat,self.bootstate)
+        time.sleep(0.01)
 
         ret = ui_load_f(BootConf, self.state.UI_Stat, self.state.route_msg)
         if ret.error == None:
             self.state.UI_Stat = ret.value
+            self.bootstate.ui_loaded = True
         else:
             self.panic()
         updateBootStateUI(self.state.UI_Stat,self.bootstate)
-        time.sleep(10)
+        time.sleep(0.01)
 
 
 
