@@ -1,9 +1,31 @@
 import argparse
 import pygame
-from Kernel.kernel import Resolutions
+from enum import Enum
 
 from Kernel.main import Kernel, BootConfig
 
+class Resolutions(Enum):
+    R_360P  = (640,  360)
+    R_480P  = (854,  480)
+    R_720P  = (1280, 720)
+    R_1080P = (1920, 1080)
+    R_1440P = (2560, 1440)
+    R_4K    = (3840, 2160)
+    R_8K    = (7680, 4320)
+
+    def width(self)  -> int: return self.value[0]
+    def height(self) -> int: return self.value[1]
+
+    def to_tuple(self) -> tuple[int, int]: return self.value
+
+    def aspect_ratio(self) -> str:
+        w, h = self.value
+        from math import gcd
+        d = gcd(w, h)
+        return f"{w // d}:{h // d}"
+
+    def __str__(self) -> str:
+        return f"{self.value[0]}x{self.value[1]}"
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -15,7 +37,7 @@ def parse_args():
         "--resolution",
         "-r",
         choices=["4k", "2k", "1080p", "720p", "480p", "360p"],
-        default="360p",
+        default="1080p",
         help="Set the display resolution"
     )
 
@@ -45,9 +67,7 @@ def parse_args():
 
 args = parse_args()
 
-resolution = Resolutions.R_360P.value
-
-# Auflösung auswählen
+resolution = Resolutions.R_1080P.value
 match args.resolution:
     case "4k":
         resolution = Resolutions.R_4K.value
