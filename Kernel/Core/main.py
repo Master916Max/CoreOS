@@ -1,5 +1,9 @@
 from ..common import *
 
+from .memory import MemoryManager
+from .permissions import PermissionManager
+from .debug import Debugger
+
 def load(boot_cfg: BootConfig, route_msg:RouteFNCType) -> Return:
     core_state = CoreState()
 
@@ -15,6 +19,7 @@ def loop(core_state:CoreState) -> Return:
 
     core_state.mem_mgr.handle_msgs()
     #! core_state.perm_mgr
+    return Return(core_state)
 
 def shutdown(core_state: CoreState) -> Logger:
     logger = Logger(Module.NONE)

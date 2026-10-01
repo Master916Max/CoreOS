@@ -621,11 +621,14 @@ Kernel/
 │   ├── ProcessMulti_K.py
 │   └── ProcessMulti_U.py
 │
-└── UI/
-    ├── main.py
-    ├── common.py
-    ├── qadbio.py
-    └── ...
+├── UI/
+│   ├── main.py
+│   ├── common.py
+│   ├── qadbio.py
+│   └── ...
+│
+└── Docs/
+    └All Docs
 ~~~
 
 The structure is actively changing during the current kernel subdivision work.
