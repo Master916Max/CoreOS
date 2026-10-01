@@ -1,9 +1,10 @@
+# ! OLD CODE DO NOT TRY TO READ OR EXECUTE IT, IT IS NOT WORKING
+# ! IT IS CURRENTLY GETTING REWRITTEN
+# ! --MAX HAMMER
+
 from typing import Any
 
-from subsystems.memory import MemoryManager
-from .logging import Logger
-from greenlet import greenlet
-from .common import SyscallReturn, SyscallReturnType
+from ..common import Return, RouteFNCType, Module
 
 class Process:
     def __init__(self, pid: int, name: str, manager_greenlet):

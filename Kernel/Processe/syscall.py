@@ -1,7 +1,10 @@
+# ! OLD CODE DO NOT TRY TO READ OR EXECUTE IT, IT IS NOT WORKING
+# ! IT IS CURRENTLY GETTING REWRITTEN
+# ! --MAX HAMMER
+
 from types import FunctionType, MethodType
 from typing import Any
-from .logging import Logger
-from .memory import MemoryManager
+from ..common import Logger
 
 class Syscall:
     def __init__(self, syscall_id: int, function: FunctionType):

@@ -1,3 +1,7 @@
+# ! OLD CODE DO NOT TRY TO READ OR EXECUTE IT, IT IS NOT WORKING
+# ! IT IS CURRENTLY GETTING REWRITTEN
+# ! --MAX HAMMER
+
 from ..Core.common import *
 from ..IPC.common import RouteFNCType,Message,Module
 from types import MethodType
