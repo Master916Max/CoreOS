@@ -96,8 +96,7 @@ class Process:
         if msg_type == MessageTypes.EXIT:
             return False
         if msg_type == MessageTypes.SYSCALL:
-            self.handle_syscall(*msg.get("args", ()))
-            return True
+            return False
         return msg_type == MessageTypes.CONTINUE
 
     def run(self) -> None:
@@ -109,9 +108,8 @@ class Process:
     
     def _handle_syscall(self, sid:int ,*args) -> object:
         self.coms.send_msg(MessageTypes.SYSCALL, (sid, *args))
-
-    def handle_syscall(self, *args) -> object:
-        return None
+        msg = self.coms.get_msg(None)
+        return msg
 
     def namespace(self) -> dict:
 
