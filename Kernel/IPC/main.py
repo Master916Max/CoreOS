@@ -6,9 +6,9 @@ def load(boot_cfg: BootConfig) -> Return:
     state.ipc = InterProcessCommunication()
     return Return(state)
 
-def loop(kernelState: KernelState) ->Return:
-    kernelState.IPC_State.ipc.handle_msgs()
+def loop(IPC_State: IPC_State) ->Return:
+    IPC_State.ipc.handle_msgs()
     return Return(True)
 
-def shutdown(kernelState:KernelState) -> Logger:
-    return kernelState.IPC_State.ipc.shutdown()
+def shutdown(IPC_State:IPC_State) -> Logger:
+    return IPC_State.ipc.shutdown()

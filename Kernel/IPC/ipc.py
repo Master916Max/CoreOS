@@ -23,8 +23,8 @@ class InterProcessCommunication:
                     module = msg.get_body().get("module", None)
                     if module and not module in self.module_reg:
                         queue = msg.get_body().get("queue", None)
-                        if queue:
-                            self.logger.log(0,f"Module: {module} has registered Successfully")
+                        if queue or isinstance(queue,list):
+                            self.logger.log(0,f"Module: {module.value} has registered Successfully")
                             self.module_reg[module] = queue
                             self.msg_queue.remove(msg)
                             continue

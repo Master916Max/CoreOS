@@ -22,9 +22,9 @@ class TextUserInterface:
         self.route_msg : RouteFNCType = rout_msg
         self.msg_queue: list[Message] = []
 
-        self.exports = {
-            [301,"",self.require_lock]
-        }
+        self.exports = [
+            [301,"",self]
+        ]
 
 
         self.height = self.mr.get_height() // self.font.render("ABCDE", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
@@ -43,7 +43,7 @@ class TextUserInterface:
 
         self.need_update = True
 
-        self.logger = Logger()
+        self.logger = Logger(Module.TUI)
 
         self.logger.log(0,"TUI init successful.")
         self.logger.log(0,f"TUI DATA:\nHeight:{self.height}\nWidth:{self.width}\nInput?:{self.input_aktive}")      
@@ -111,6 +111,9 @@ class TextUserInterface:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.send_msg(Module.KERNEL,{"action":"shutdown"})
+                pygame.quit()
+                self.aktiv = False
+                return
                 
             elif event.type == pygame.KEYDOWN:
                 if self.input_aktive:
@@ -266,6 +269,7 @@ class TextUserInterface:
         self.print_line("Please Wait")
 
         self.handle_event()
+        self.logger.log(0,"TUI Shutdown Successful")
 
         print(self.mr.get_last_FPS_stats())
 

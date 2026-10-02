@@ -65,12 +65,14 @@ class Kernel:
         updateBootStateUI(self.state.UI_Stat,self.bootstate)
         time.sleep(0.01)
 
+        self.register_ipc()
+
 
 
     def run(self) -> None:
         self.state.running = True
         while self.state.running:
-            ret = ipc_loop(self.state)
+            ret = ipc_loop(self.state.IPC_State)
             if ret.error != None:
                  self.panic()
             ret = ui_loop_f(self.state.UI_Stat)
@@ -80,6 +82,7 @@ class Kernel:
             if ret.error != None:
                 self.panic()
             self.handle_msg()
+        self.shutdown()
 
             
     def register_ipc(self) -> None:
@@ -90,6 +93,7 @@ class Kernel:
             "module": Module.KERNEL,
             "queue": self.msg_queue
         })
+        self.state.route_msg(reg_msg)
 
     def handle_msg(self) -> None:
         for msg in self.msg_queue:
@@ -108,11 +112,12 @@ class Kernel:
 
 
     def shutdown(self) -> None:
-        self.state.logger += core_shutdown()
-        self.state.logger += ui_shutdown()
-        self.state.logger += ipc_shutdown()
+        self.state.logger = self.state.logger.__add__(core_shutdown(self.state.Core_State))
+        self.state.logger = self.state.logger.__add__(ui_shutdown(self.state.UI_Stat))
+        self.state.logger = self.state.logger.__add__(ipc_shutdown(self.state.IPC_State))
 
-        print(self.state.logger.get_logs_s())
+        print(self.state.logger.get_logs_s(-5))
+        self.panic()
             
             
 
