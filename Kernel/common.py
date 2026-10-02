@@ -1,6 +1,8 @@
 from .IPC.common import *
 from .Core.common import *
 from .UI.common import UIState, BootState
+from .Processe.common import ProcessState
+
 
 
 class BootConfig:
@@ -15,6 +17,7 @@ class KernelState:
     Core_State: CoreState
     IPC_State: IPC_State
     logger: Logger
+    Process_State: ProcessState
     error: list[Error]  = []
     running: bool       = False
     crash: bool         = False

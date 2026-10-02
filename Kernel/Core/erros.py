@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Any
 
+
 class ErrorType(Enum):
     LoggerError = 0
     MemoryError = 1
@@ -9,6 +10,7 @@ class ErrorType(Enum):
     TUIError = 4
     KernelError = 5
     SyscallError = 6
+    ProcessError = 7
 
 class ErrorCode(Enum):
     pass
@@ -37,7 +39,12 @@ class IPCErrorCode(ErrorCode):
 
 class BootError(ErrorCode):
     UIInitializationFailed = 1
-    pass
+
+class ProcessErrorCode(ErrorCode):
+    InvalidPID = 0
+    SpawnFailed = 1
+    UnsupportedAction = 2
+
 
 class Error:
     def __init__(self,error_type:ErrorType,error_code:ErrorCode,message:str) -> None:
