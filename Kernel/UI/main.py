@@ -37,6 +37,10 @@ def loop(state: UIState) -> Return:
         state.tui.handle_event()
     return Return(state)
 
-def shutdown(kernelState: KernelState) -> Logger:
-
-    return Logger()
+def shutdown(state: UIState) -> Logger:
+    logger = Logger()
+    if state.tui:
+        logger = state.tui.shutdown()
+    elif state.gui:
+        logger = state.gui.shutdown()
+    return logger
