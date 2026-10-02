@@ -103,8 +103,19 @@ class Process:
     def run(self) -> None:
         self.running = True
         while self.running:
-            self.running = self.can_execute(timeout=None)
+            exec(self.code,self.namespace())
+        self.coms.send_msg(MessageTypes.EXIT, 0)
         self.coms.close()
+    
+    def _handle_syscall(self, sid:int ,*args) -> object:
+        self.coms.send_msg(MessageTypes.SYSCALL, (sid, *args))
 
     def handle_syscall(self, *args) -> object:
         return None
+
+    def namespace(self) -> dict:
+
+        return {
+            "syscall" : self._handle_syscall,
+            "ret" : self.pid
+        }

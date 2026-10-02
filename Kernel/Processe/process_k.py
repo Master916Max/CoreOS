@@ -97,7 +97,7 @@ class ProcessManager:
                         "action": "return",
                         "error": Error(
                             ErrorType.ProcessError,
-                            ProcessErrorCode.UnknownPID,
+                            ProcessErrorCode.InvalidPID,
                             f"Unknown pid: {pid}",
                         ),
                     }))
@@ -162,6 +162,7 @@ class ProcessManager:
                     "pid" : process.pid,
                     "sid" : args[0],
                     "sargs": args})
+                self.route_msg(msg_s)
                 self.logger.log(0, f"Process {self.next_pid_to_run} made a syscall with this body: ('action': 'syscall', 'pid' : {process.pid}, 'sid' : {args[0]}, 'sargs': {args})")
             else:
                 self.logger.log(2, f"execute: pid {self.next_pid_to_run} sent unknown message type {msg_type}")

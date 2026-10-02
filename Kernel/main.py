@@ -126,6 +126,7 @@ class Kernel:
                             "action" : "return",
                             "error" : "Unsupported Action"
                         })
+            self.msg_queue.remove(msg)
 
 
     def shutdown(self) -> None:
