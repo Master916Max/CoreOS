@@ -1,25 +1,25 @@
-from ast import Mod
-from math import fabs
+import sys
 import time
-# Core Functions
-from .Core.main import load as core_load
-from .Core.main import loop as core_loop
-from .Core.main import shutdown as core_shutdown
-# UI Functions
-from .UI.main import  shutdown
-from .UI.main import load_q as ui_load_q
-from .UI.main import load_f as ui_load_f
-from .UI.main import loop as ui_loop_f
-from .UI.main import shutdown as ui_shutdown
-from .UI.main import updateBootStateUI
-# IPC Funtions
-from .IPC.main import load as ipc_load
-from .IPC.main import loop as ipc_loop
-from .IPC.main import shutdown as ipc_shutdown
 
 # System Wide Defs
 from .common import *
 
+# Core Functions
+from .Core.main import load as core_load
+from .Core.main import loop as core_loop
+from .Core.main import shutdown as core_shutdown
+
+# IPC Funtions
+from .IPC.main import load as ipc_load
+from .IPC.main import loop as ipc_loop
+from .IPC.main import shutdown as ipc_shutdown
+from .UI.main import load_f as ui_load_f
+from .UI.main import load_q as ui_load_q
+from .UI.main import loop as ui_loop_f
+
+# UI Functions
+from .UI.main import shutdown, updateBootStateUI
+from .UI.main import shutdown as ui_shutdown
 
 
 class Kernel:
@@ -79,6 +79,7 @@ class Kernel:
             ret = core_loop(self.state.Core_State)
             if ret.error != None:
                 self.panic()
+            self.handle_msg()
 
             
     def register_ipc(self) -> None:
@@ -116,6 +117,6 @@ class Kernel:
             
 
     def panic(self) -> None:
-        exit(120000)
+        sys.exit(120000)
         pass
         

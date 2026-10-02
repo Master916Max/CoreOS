@@ -1,15 +1,14 @@
-from ast import Mod
-from types import FunctionType
 
 import pygame
 
+from ..Core.common import Logger, Return
+from ..IPC.common import Message, Module, RouteFNCType
 from .GUI.MimirRender import MimirRender
-from ..Core.logger import Logger
-from ..IPC.common import Module,Message
-from ..Core.erros import Return,Error,ErrorType
+
 
 class TextUserInterface:
-    def __init__(self, screen,rout_msg:FunctionType):
+    def __init__(self, screen,rout_msg:RouteFNCType):
+        self.aktiv = True
         self.screen: pygame.Surface = screen
         self.mr: MimirRender = MimirRender(screen)
         self.mr.set_up_all_FPS()
@@ -20,11 +19,15 @@ class TextUserInterface:
         self.lock = 0
         self.waiting_queue = []
         
-        self.route_msg : FunctionType = rout_msg
+        self.route_msg : RouteFNCType = rout_msg
         self.msg_queue: list[Message] = []
 
+        self.exports = {
+            [301,"",self.require_lock]
+        }
 
-        self.height = self.mr.get_height() // self.font.render("ABC", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
+
+        self.height = self.mr.get_height() // self.font.render("ABCDE", True, self.text_color).get_height()  # Calculate how many lines can fit on the screen
         self.width = self.mr.get_width() // (self.font.render("ABCDE", True, self.text_color).get_width()//5)   # Calculate how many characters can fit on a line
 
         self.lines : list[str] = [""] * self.height  # Initialize empty lines
@@ -87,7 +90,8 @@ class TextUserInterface:
         self.current_line = 0
 
     def update(self):
-        if self.need_update or True:
+        if not self.aktiv: return
+        if self.need_update:
             self.mr.clear()
             for idx, line in enumerate(self.lines):
                 if idx == self.current_line and self.do_show_input:
@@ -99,14 +103,15 @@ class TextUserInterface:
         self.need_update = False
     
     def handle_event(self):
+        if not self.aktiv: return
         # Handle all MSGs from the queue
         self.handle_msg()
 
         # Handle all Pygame events here (e.g., keyboard input)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
+                self.send_msg(Module.KERNEL,{"action":"shutdown"})
+                
             elif event.type == pygame.KEYDOWN:
                 if self.input_aktive:
                     if self.do_show_input: self.need_update = True
@@ -127,16 +132,15 @@ class TextUserInterface:
                         self.input_buffer = ""
                     else:
                         self.input_buffer += event.unicode
-                    if self.input_mode == "char":
-                        if event.key not in (pygame.K_BACKSPACE, pygame.K_RETURN):
-                            self.input_aktive = False
-                            if self.pending_input_message is not None:
-                                self.route_msg(self.pending_input_message.answer({
-                                    "action": "return",
-                                    "return": self.input_buffer[-1:]
-                                }))
-                                self.pending_input_message = None
-                            self.input_buffer = ""
+                    if self.input_mode == "char" and event.key not in (pygame.K_BACKSPACE, pygame.K_RETURN):
+                        self.input_aktive = False
+                        if self.pending_input_message is not None:
+                            self.route_msg(self.pending_input_message.answer({
+                                "action": "return",
+                                "return": self.input_buffer[-1:]
+                            }))
+                            self.pending_input_message = None
+                        self.input_buffer = ""
 
             else:
                 continue
@@ -224,6 +228,25 @@ class TextUserInterface:
                     response["return"] = result
                 self.route_msg(msg.answer(response))
 
+    def send_msg(self,recv: Module,body:dict) -> None:
+        msg = Message()
+        msg.set_header(Module.TUI,recv,False)
+        msg.set_body(body)
+        self.route_msg(msg)
+
+    def setup_syscalls(self) -> Return:
+
+        def register_syscall(self,id,action) -> None:
+            TextUserInterface.send_msg(self,Module.SYSCALLMANAGER,{
+                "action" : "register_syscall",
+                "id" : id,
+                "action_s" : action
+            })
+
+        register_syscall(self,301,"require_tui")
+
+
+        return Return(True)
 #    def set_up_syscalls(self):
 #        pass
 #        
