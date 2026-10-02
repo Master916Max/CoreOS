@@ -18,12 +18,12 @@ from .IPC.main import shutdown as ipc_shutdown
 from .Processe.main import load as process_load
 from .Processe.main import loop as process_loop
 from .Processe.main import shutdown as process_shutdown
+from .UI.main import load_f as ui_load_f
 
 # UI Functions
 from .UI.main import load_q as ui_load_q
 from .UI.main import loop as ui_loop_f
 from .UI.main import shutdown as ui_shutdown
-from .UI.main import load_f as ui_load_f
 from .UI.main import updateBootStateUI
 
 
@@ -93,6 +93,9 @@ class Kernel:
             if ret.error != None:
                 self.panic()
             ret = core_loop(self.state.Core_State)
+            if ret.error != None:
+                self.panic()
+            ret = process_loop(self.state.Process_State)
             if ret.error != None:
                 self.panic()
             self.handle_msg()

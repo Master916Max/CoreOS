@@ -51,7 +51,6 @@ class ProcessManager:
             name=f"proc-{pid}",
             daemon=True,
         )
-        mp_proc.start()
 
         self.processes[pid] = _Process(pid, coms, mp_proc)
         self.logger.log(0, f"Process spawned: pid={pid}")
@@ -76,12 +75,7 @@ class ProcessManager:
         return True
 
     def handle_msgs(self) -> None:
-        # Iterate over a snapshot, not self.msg_queue directly: every
-        # branch below removes the handled message right after dealing
-        # with it, so mutating the live list mid-iteration would skip
-        # entries. (This is the bug that's still open in IPC.handle_msgs -
-        # fixed here on purpose.)
-        for msg in self.msg_queue:
+        for msg in list(self.msg_queue):
             body = msg.get_body()
             action = body.get("action", None)
 
@@ -151,7 +145,7 @@ class ProcessManager:
                 return
         
         msg: dict | None = process.coms.get_msg(timeout=0.1)
-        os.kill(process.mp_proc.pid, signal.SIDSTOP)
+        os.kill(process.mp_proc.pid, signal.SIGSTOP)
 
         if msg:
             msg_type = msg.get("type", MessageTypes.EXIT)
@@ -181,6 +175,6 @@ class ProcessManager:
         self.execute()
 
     def shutdown(self) -> Logger:
-        for pid in list(self.workers.keys()):
+        for pid in list(self.processes.keys()):
             self.kill_process(pid)
         return self.logger

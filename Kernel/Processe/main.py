@@ -9,7 +9,7 @@ def load(boot_cfg: BootConfig, route_msg: RouteFNCType) -> Return:
     return Return(state)
 
 def loop(state: ProcessState) -> Return:
-    state.manager.handle_msgs()
+    state.manager.loop()
     return Return(state)
 
 def shutdown(state: ProcessState) -> Logger:

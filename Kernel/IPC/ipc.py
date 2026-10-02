@@ -17,7 +17,7 @@ class InterProcessCommunication:
             return Return(False,Error(ErrorType.IPCError,IPCErrorCode.ModuleNotRegistered,"The Requested Module has not been Registered at the Moment"))
 
     def handle_msgs(self) ->None:
-        for msg in self.msg_queue:
+        for msg in list(self.msg_queue):
             match msg.get_body().get("action","None"):
                 case "register":
                     module = msg.get_body().get("module", None)
@@ -29,8 +29,6 @@ class InterProcessCommunication:
                             self.msg_queue.remove(msg)
                             continue
                     self.route_msg(msg.answer({"action":"return","error":IPCErrorCode.InvalidMSGBody}))
-                        
-                    break
                 case "None":
                     continue
                 case _ :

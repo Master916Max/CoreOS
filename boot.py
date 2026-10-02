@@ -98,6 +98,7 @@ boot_cfg = BootConfig()
 
 boot_cfg.screen = screen
 boot_cfg.UI = "TUI"
+boot_cfg.debugger_enabled = args.debug
 
 live_kernel = Kernel()
 

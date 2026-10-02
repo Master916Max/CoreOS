@@ -1,16 +1,22 @@
 from __future__ import annotations
-from uuid import uuid4
-from enum import Enum
-from typing import Callable, TYPE_CHECKING
 
-if TYPE_CHECKING: from .ipc import InterProcessCommunication
-if TYPE_CHECKING: from ..Core.erros import Return
+from collections.abc import Callable
+from enum import Enum
+from typing import TYPE_CHECKING
+from uuid import uuid4
+
+if TYPE_CHECKING: 
+    from .ipc import InterProcessCommunication
+if TYPE_CHECKING: 
+    from ..Core.erros import Return
+
 class Module(Enum):
     KERNEL = "kernel"
     MEMORY = "memory"
     IPC = "ipc"
     SYSCALLMANAGER = "syscallmgr"
     TUI = "tui"
+    PROCESS = "process"
     NONE = ""
 
 class Message:
