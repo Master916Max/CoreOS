@@ -1,7 +1,0 @@
-# GUI/TUI Operations Syscalls
-
-## 350:
-
-### Is GUI avaliable
-
-#### Returns 0 if not and 1 if is
